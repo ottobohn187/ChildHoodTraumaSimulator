@@ -144,6 +144,10 @@ class ChapterTwoBattle extends Phaser.Scene {
     this.load.image("chapter2-arena", "assets/chapter2-volcanic-arena.png");
     this.load.image("chapter2-mother", "assets/chapter2-mother.png");
     this.load.image("chapter2-rex", "assets/chapter2-rex.png");
+    this.load.image("chapter2-mother-windup", "assets/chapter2-mother-windup.png");
+    this.load.image("chapter2-mother-strike", "assets/chapter2-mother-strike.png");
+    this.load.image("chapter2-rex-windup", "assets/chapter2-rex-windup.png");
+    this.load.image("chapter2-rex-bite", "assets/chapter2-rex-bite.png");
     this.load.image("chapter2-victory", "assets/chapter2-sunset-victory.png");
     this.load.image("chapter2-failure", "assets/chapter2-failure-rain.png");
     this.load.audio("chapter2-fight-music", "assets/chapter2-fight-cover.mp3");
@@ -245,7 +249,11 @@ class ChapterTwoBattle extends Phaser.Scene {
     this.battle = rexAttack(this.battle);
     this.status.setText("HE BITES — FIGHT BACK FASTER!");
     const rexStart = this.rex.x;
-    this.tweens.add({ targets: this.rex, x: rexStart + 190, y: this.rex.y - 8, scaleX: 1.08, scaleY: .97, duration: 170, hold: 115, yoyo: true, ease: "Power3", onYoyo: () => this.sprayBlood(665, 385) });
+    this.rex.setTexture("chapter2-rex-windup").setDisplaySize(650, 366);
+    this.time.delayedCall(115, () => {
+      this.rex.setTexture("chapter2-rex-bite").setDisplaySize(650, 366);
+      this.tweens.add({ targets: this.rex, x: rexStart + 190, y: this.rex.y - 8, duration: 155, hold: 140, yoyo: true, ease: "Power3", onYoyo: () => this.sprayBlood(665, 385), onComplete: () => this.rex.setTexture("chapter2-rex").setDisplaySize(650, 366) });
+    });
     this.tweens.add({ targets: this.mother, x: this.mother.x + 52, angle: 4, tint: 0xb72c24, duration: 105, hold: 120, yoyo: true, ease: "Back.out", onComplete: () => this.mother.clearTint() });
     this.cameras.main.flash(135, 145, 0, 0, false);
     this.cameras.main.shake(300, .02);
@@ -310,14 +318,16 @@ class ChapterTwoBattle extends Phaser.Scene {
   }
 
   private animateTailWhip() {
-    const ghostA = this.add.image(this.mother.x, this.mother.y, "chapter2-mother").setDisplaySize(720, 480).setAlpha(.2).setTint(0xffb35a).setAngle(10).setDepth(this.mother.depth - 1);
-    const ghostB = this.add.image(this.mother.x - 28, this.mother.y, "chapter2-mother").setDisplaySize(720, 480).setAlpha(.3).setTint(0xffd68a).setAngle(4).setDepth(this.mother.depth - 1);
     const trail = this.add.graphics().setDepth(this.mother.depth + 1);
     trail.lineStyle(18, 0xff9b3d, .48).beginPath().arc(790, 430, 285, 3.45, 5.05, false).strokePath();
     trail.lineStyle(7, 0xffe1a0, .8).beginPath().arc(790, 430, 250, 3.4, 5.0, false).strokePath();
-    this.mother.setAngle(11).setX(this.mother.x + 24);
-    this.tweens.add({ targets: this.mother, x: this.mother.x - 92, angle: -12, duration: 115, hold: 55, yoyo: true, ease: "Expo.out" });
-    this.tweens.add({ targets: [ghostA, ghostB, trail], alpha: 0, duration: 260, onComplete: () => { ghostA.destroy(); ghostB.destroy(); trail.destroy(); } });
+    const startX = this.mother.x;
+    this.mother.setTexture("chapter2-mother-windup").setDisplaySize(720, 480).setAngle(3);
+    this.time.delayedCall(105, () => {
+      this.mother.setTexture("chapter2-mother-strike").setDisplaySize(720, 480).setAngle(-5);
+      this.tweens.add({ targets: this.mother, x: startX - 78, duration: 105, hold: 80, yoyo: true, ease: "Expo.out", onComplete: () => this.mother.setTexture("chapter2-mother").setDisplaySize(720, 480).setAngle(0) });
+    });
+    this.tweens.add({ targets: trail, alpha: 0, duration: 330, onComplete: () => trail.destroy() });
   }
 
   private sprayBlood(x: number, y: number) {
