@@ -92,21 +92,22 @@ class ChapterSelect extends Phaser.Scene {
   private makeChapterRail() {
     const chapterThreeAvailable = DEBUG_UNLOCK_CHAPTER_THREE || this.bonusDone;
     const chapterFourAvailable = DEBUG_UNLOCK_CHAPTER_FOUR || this.chapterThreeHealed;
-    const labels = [this.chapterOneHealed ? "1. HEALED" : "1. ARTAX", "2. UNLOCKED", this.chapterThreeHealed ? "3. HEALED" : chapterThreeAvailable ? "3. DIP RESCUE" : "3. LOCKED", this.chapterFourHealed ? "4. HEALED" : chapterFourAvailable ? "4. OLD YELLER" : "4. LOCKED", "5. LOCKED", "6. LOCKED"];
+    const labels = [this.chapterOneHealed ? "1. HEALED" : "1. ARTAX", "2. UNLOCKED", this.chapterThreeHealed ? "3. HEALED" : chapterThreeAvailable ? "3. DIP RESCUE" : "3. LOCKED", this.chapterFourHealed ? "4. HEALED" : chapterFourAvailable ? "4. OLD YELLER" : "4. LOCKED", "BONUS 4", "6. LOCKED"];
     labels.forEach((label, i) => {
       const x = 36 + i * 202;
       const chapterThree = i === 2 && chapterThreeAvailable;
       const chapterFour = i === 3 && chapterFourAvailable;
-      const available = chapterThree || chapterFour;
+      const chapterFourBonus = i === 4;
+      const available = chapterThree || chapterFour || chapterFourBonus;
       const rail = this.add.rectangle(x, 584, 184, 91, i === 0 ? 0x24312e : available ? 0x183224 : 0x0b0e0d, .96).setOrigin(0).setStrokeStyle(i === 0 ? 4 : available ? 3 : 2, i === 0 ? 0xc92c26 : available ? 0x71d86f : 0x474c49, 1);
       this.add.text(x + 92, 644, label, { fontFamily: "Arial Black", fontSize: "13px", color: i === 0 ? "#f0e7d4" : available ? "#c9f5b9" : "#676c69" }).setOrigin(.5);
       if (i > 0 && i !== 1 && !available) this.add.text(x + 92, 614, "🔒", { fontSize: "22px" }).setOrigin(.5);
-      if (i === 1 || available) this.add.text(x + 92, 614, available ? "RUN" : "✓", { fontFamily: "Arial Black", fontSize: available ? "17px" : "24px", color: "#b8dda8" }).setOrigin(.5);
+      if (i === 1 || available) this.add.text(x + 92, 614, chapterFourBonus ? "VIEW" : available ? "RUN" : "✓", { fontFamily: "Arial Black", fontSize: available ? "17px" : "24px", color: "#b8dda8" }).setOrigin(.5);
       if (available) {
         rail.setInteractive({ useHandCursor: true });
         rail.on("pointerover", () => rail.setStrokeStyle(5, 0xa5ff91, 1));
         rail.on("pointerout", () => rail.setStrokeStyle(3, 0x71d86f, 1));
-        rail.on("pointerdown", () => this.gender ? this.scene.start(chapterFour ? "chapter4" : "chapter3") : this.showGenderPrompt());
+        rail.on("pointerdown", () => this.gender ? this.scene.start(chapterFourBonus ? "chapter4bonus" : chapterFour ? "chapter4" : "chapter3") : this.showGenderPrompt());
       }
     });
   }
