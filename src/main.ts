@@ -2,17 +2,21 @@ import Phaser from "phaser";
 import "./style.css";
 import { canRescue, rescuePhase, stepTapRescue, tapPull, type RescueState } from "./game/rescuePhysics";
 import { battleOutcome, rexAttack, tailStrike, type BattleState } from "./game/chapter2Physics";
+import { DIP_RESCUE_SECONDS, dipRescueOutcome, stepDipRescue, tapRun, type DipRescueState } from "./game/chapter3Physics";
 
 type PlayerGender = "male" | "female";
 const PROFILE_KEY = "trauma-player-gender";
 const CHAPTER_ONE_HEALED_KEY = "trauma-chapter-1-healed";
 const CHAPTER_TWO_HEALED_KEY = "trauma-chapter-2-healed";
+const CHAPTER_THREE_HEALED_KEY = "trauma-chapter-3-healed";
 const BONUS_DONE_KEY = "trauma-bonus-done";
 const DEBUG_UNLOCK_CHAPTER_TWO = true;
+const DEBUG_UNLOCK_CHAPTER_THREE = true;
 
 class ChapterSelect extends Phaser.Scene {
   private gender: PlayerGender | null = null;
   private chapterOneHealed = false;
+  private chapterThreeHealed = false;
   private bonusDone = false;
 
   constructor() { super("menu"); }
@@ -29,6 +33,7 @@ class ChapterSelect extends Phaser.Scene {
     const { width, height } = this.scale;
     this.gender = localStorage.getItem(PROFILE_KEY) as PlayerGender | null;
     this.chapterOneHealed = localStorage.getItem(CHAPTER_ONE_HEALED_KEY) === "true";
+    this.chapterThreeHealed = localStorage.getItem(CHAPTER_THREE_HEALED_KEY) === "true";
     this.bonusDone = localStorage.getItem(BONUS_DONE_KEY) === "true";
     this.add.image(width / 2, height / 2, "swamp").setDisplaySize(width, height).setAlpha(.34);
     this.add.rectangle(width / 2, height / 2, width, height, 0x030606, .67);
@@ -80,13 +85,21 @@ class ChapterSelect extends Phaser.Scene {
   }
 
   private makeChapterRail() {
-    const labels = [this.chapterOneHealed ? "1. HEALED" : "1. ARTAX", "2. UNLOCKED", this.bonusDone ? "3. UNLOCKED" : "3. LOCKED", "4. LOCKED", "5. LOCKED", "6. LOCKED"];
+    const chapterThreeAvailable = DEBUG_UNLOCK_CHAPTER_THREE || this.bonusDone;
+    const labels = [this.chapterOneHealed ? "1. HEALED" : "1. ARTAX", "2. UNLOCKED", this.chapterThreeHealed ? "3. HEALED" : chapterThreeAvailable ? "3. DIP RESCUE" : "3. LOCKED", "4. LOCKED", "5. LOCKED", "6. LOCKED"];
     labels.forEach((label, i) => {
       const x = 36 + i * 202;
-      this.add.rectangle(x, 584, 184, 91, i === 0 ? 0x24312e : 0x0b0e0d, .96).setOrigin(0).setStrokeStyle(i === 0 ? 4 : 2, i === 0 ? 0xc92c26 : 0x474c49, 1);
-      this.add.text(x + 92, 644, label, { fontFamily: "Arial Black", fontSize: "13px", color: i === 0 ? "#f0e7d4" : "#676c69" }).setOrigin(.5);
-      if (i > 0 && i !== 1 && !(i === 2 && this.bonusDone)) this.add.text(x + 92, 614, "🔒", { fontSize: "22px" }).setOrigin(.5);
-      if (i === 1 || (i === 2 && this.bonusDone)) this.add.text(x + 92, 614, "✓", { fontFamily: "Arial Black", fontSize: "24px", color: "#b8dda8" }).setOrigin(.5);
+      const chapterThree = i === 2 && chapterThreeAvailable;
+      const rail = this.add.rectangle(x, 584, 184, 91, i === 0 ? 0x24312e : chapterThree ? 0x183224 : 0x0b0e0d, .96).setOrigin(0).setStrokeStyle(i === 0 ? 4 : chapterThree ? 3 : 2, i === 0 ? 0xc92c26 : chapterThree ? 0x71d86f : 0x474c49, 1);
+      this.add.text(x + 92, 644, label, { fontFamily: "Arial Black", fontSize: "13px", color: i === 0 ? "#f0e7d4" : chapterThree ? "#c9f5b9" : "#676c69" }).setOrigin(.5);
+      if (i > 0 && i !== 1 && !chapterThree) this.add.text(x + 92, 614, "🔒", { fontSize: "22px" }).setOrigin(.5);
+      if (i === 1 || chapterThree) this.add.text(x + 92, 614, chapterThree ? "RUN" : "✓", { fontFamily: "Arial Black", fontSize: chapterThree ? "17px" : "24px", color: "#b8dda8" }).setOrigin(.5);
+      if (chapterThree) {
+        rail.setInteractive({ useHandCursor: true });
+        rail.on("pointerover", () => rail.setStrokeStyle(5, 0xa5ff91, 1));
+        rail.on("pointerout", () => rail.setStrokeStyle(3, 0x71d86f, 1));
+        rail.on("pointerdown", () => this.gender ? this.scene.start("chapter3") : this.showGenderPrompt());
+      }
     });
   }
 
@@ -462,6 +475,168 @@ class ChapterTwoBattle extends Phaser.Scene {
     const banner = this.add.text(this.scale.width / 2, 238, message, { fontFamily: "Arial Black", fontSize: "43px", color, stroke: "#180000", strokeThickness: 9, letterSpacing: 3 }).setOrigin(.5).setDepth(40).setScale(.45).setAlpha(0);
     this.announcerBanner = banner;
     this.tweens.add({ targets: banner, scale: 1, alpha: 1, duration: 140, ease: "Back.out", hold: 700, yoyo: true, onComplete: () => { banner.destroy(); if (this.announcerBanner === banner) this.announcerBanner = undefined; } });
+  }
+}
+
+class ChapterThreeRescue extends Phaser.Scene {
+  private rescue: DipRescueState = { distance: 0, time: DIP_RESCUE_SECONDS, danger: 0 };
+  private started = false;
+  private ended = false;
+  private runner!: Phaser.GameObjects.Image;
+  private toon!: Phaser.GameObjects.Image;
+  private distanceBar!: Phaser.GameObjects.Rectangle;
+  private dangerBar!: Phaser.GameObjects.Rectangle;
+  private timerText!: Phaser.GameObjects.Text;
+  private status!: Phaser.GameObjects.Text;
+  private distanceText!: Phaser.GameObjects.Text;
+  private runButton!: Phaser.GameObjects.Container;
+
+  constructor() { super("chapter3"); }
+
+  init() {
+    this.rescue = { distance: 0, time: DIP_RESCUE_SECONDS, danger: 0 };
+    this.started = false;
+    this.ended = false;
+  }
+
+  preload() {
+    this.load.image("chapter3-factory", "assets/chapter3-dip-factory.png");
+    this.load.image("chapter3-runner", "assets/chapter3-runner.png");
+    this.load.image("chapter3-toon", "assets/chapter3-toon-cage.png");
+    this.load.image("chapter3-victory", "assets/chapter3-victory.png");
+  }
+
+  create() {
+    const { width, height } = this.scale;
+    this.add.image(width / 2, height / 2, "chapter3-factory").setDisplaySize(width, height);
+    this.add.rectangle(width / 2, height / 2, width, height, 0x03100a, .08);
+    this.makeDipMist();
+
+    this.runner = this.add.image(92, 507, "chapter3-runner").setDisplaySize(268, 179).setDepth(8);
+    this.toon = this.add.image(1070, 242, "chapter3-toon").setDisplaySize(170, 255).setDepth(7);
+
+    this.add.rectangle(width / 2, 66, width, 132, 0x020806, .86).setDepth(10);
+    this.add.text(28, 14, "CHAPTER 3", { fontFamily: "Arial Black", fontSize: "17px", color: "#8bdc82", stroke: "#000", strokeThickness: 4 }).setDepth(11);
+    this.add.text(28, 39, "SAVE THE TOON FROM THE DIP", { fontFamily: "Arial Black", fontSize: "31px", color: "#efffd9", stroke: "#001b08", strokeThickness: 7 }).setDepth(11);
+    this.add.text(30, 86, "Hit RUN fast enough to cross the factory before the cage reaches the vat.", { fontFamily: "Georgia", fontSize: "16px", color: "#d2e4cc" }).setDepth(11);
+    this.timerText = this.add.text(width - 28, 19, "00:22", { fontFamily: "Arial Black", fontSize: "34px", color: "#b9ff9c", stroke: "#001c08", strokeThickness: 7 }).setOrigin(1, 0).setDepth(11);
+    this.add.text(width - 28, 66, "40 PRESSES TO REWRITE IT", { fontFamily: "Arial Black", fontSize: "12px", color: "#88b987" }).setOrigin(1, 0).setDepth(11);
+
+    this.makeMeter(28, 126, "DISTANCE CLOSED", 0xd69d45);
+    this.distanceBar = this.add.rectangle(30, 158, 330, 20, 0xe8b04f).setOrigin(0, .5).setDepth(11);
+    this.distanceBar.width = 0;
+    this.makeMeter(width - 360, 126, "DIP DANGER", 0x55f12f);
+    this.dangerBar = this.add.rectangle(width - 358, 158, 330, 20, 0x55f12f).setOrigin(0, .5).setDepth(11);
+    this.dangerBar.width = 0;
+
+    this.status = this.add.text(width / 2, 559, "PRESS RUN TO BEGIN", { fontFamily: "Arial Black", fontSize: "20px", color: "#f3ffe8", stroke: "#001807", strokeThickness: 6 }).setOrigin(.5).setDepth(12);
+    this.distanceText = this.add.text(width / 2, 588, "100 METERS AWAY", { fontFamily: "Arial Black", fontSize: "13px", color: "#bdddac", stroke: "#001807", strokeThickness: 4 }).setOrigin(.5).setDepth(12);
+    this.runButton = this.makeRunButton(width / 2, 658);
+
+    this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE).on("down", () => this.pressRun());
+    this.input.keyboard!.on("keydown-M", () => this.scene.start("menu"));
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.sound.stopAll());
+  }
+
+  update(time: number, delta: number) {
+    if (this.ended) return;
+    this.toon.setAngle(Math.sin(time / 430) * 1.7);
+    if (!this.started) return;
+    this.rescue = stepDipRescue(this.rescue, delta / 1000);
+    this.updateRescueUI();
+    const outcome = dipRescueOutcome(this.rescue);
+    if (outcome !== "running") this.finish(outcome === "won");
+  }
+
+  private makeMeter(x: number, y: number, label: string, color: number) {
+    this.add.text(x, y - 21, label, { fontFamily: "Arial Black", fontSize: "13px", color: "#e9f1df", stroke: "#000", strokeThickness: 4 }).setDepth(11);
+    this.add.rectangle(x, y + 32, 334, 24, 0x061008, .96).setOrigin(0, .5).setStrokeStyle(2, color, .9).setDepth(11);
+  }
+
+  private makeRunButton(x: number, y: number) {
+    const pulse = this.add.circle(0, 0, 58, 0x09200d, .9).setStrokeStyle(5, 0x8dff67, 1);
+    const core = this.add.circle(0, 0, 45, 0x28752b, 1).setStrokeStyle(3, 0xe6ffd3, 1).setInteractive({ useHandCursor: true });
+    const label = this.add.text(0, -7, "RUN!", { fontFamily: "Arial Black", fontSize: "21px", color: "#f3ffe6", stroke: "#001405", strokeThickness: 5 }).setOrigin(.5);
+    const hint = this.add.text(0, 18, "CLICK / SPACE", { fontFamily: "Arial Black", fontSize: "8px", color: "#d0f3c1" }).setOrigin(.5);
+    core.on("pointerdown", () => this.pressRun());
+    this.tweens.add({ targets: pulse, scale: 1.1, alpha: .55, duration: 480, yoyo: true, repeat: -1 });
+    return this.add.container(x, y, [pulse, core, label, hint]).setDepth(12);
+  }
+
+  private pressRun() {
+    if (this.ended) return;
+    if (!this.started) {
+      this.started = true;
+      this.status.setText("RUN — DON'T LET THE CAGE REACH THE DIP!");
+    }
+    this.rescue = tapRun(this.rescue);
+    this.runner.setX(92 + this.rescue.distance * 8.15);
+    this.tweens.killTweensOf(this.runner);
+    this.runner.setY(507).setAngle(0);
+    this.tweens.add({ targets: this.runner, y: 495, angle: -2.5, duration: 80, yoyo: true, ease: "Quad.out" });
+    this.tweens.add({ targets: this.runButton, scale: .86, duration: 55, yoyo: true });
+    this.cameras.main.shake(55, .0018);
+    this.updateRescueUI();
+    if (dipRescueOutcome(this.rescue) === "won") this.finish(true);
+  }
+
+  private updateRescueUI() {
+    this.timerText.setText(`00:${Math.ceil(this.rescue.time).toString().padStart(2, "0")}`);
+    this.distanceBar.width = 330 * this.rescue.distance / 100;
+    this.dangerBar.width = 330 * this.rescue.danger / 100;
+    this.toon.setY(242 + this.rescue.danger * 2.05);
+    const meters = Math.max(0, Math.ceil(100 - this.rescue.distance));
+    this.distanceText.setText(meters > 0 ? `${meters} METERS AWAY` : "REACH THE CAGE!");
+    if (this.rescue.time <= 7 && !this.ended) {
+      this.timerText.setColor("#ff675c");
+      this.status.setText("THE DIP IS RIGHT BELOW HIM — RUN!");
+    }
+  }
+
+  private finish(won: boolean) {
+    if (this.ended) return;
+    this.ended = true;
+    this.runButton.setAlpha(.35);
+    this.tweens.killTweensOf([this.runner, this.toon]);
+    if (won) {
+      localStorage.setItem(CHAPTER_THREE_HEALED_KEY, "true");
+      this.status.setText("YOU REACHED HIM — PULL HIM CLEAR!");
+      this.cameras.main.flash(180, 220, 255, 190, false);
+      this.tweens.add({ targets: this.runner, x: 960, y: 490, duration: 500, ease: "Power2" });
+      this.tweens.add({ targets: this.toon, y: 185, x: 1010, angle: 0, duration: 700, ease: "Back.out" });
+    } else {
+      this.status.setText("THE CAGE REACHED THE DIP");
+      this.cameras.main.flash(320, 70, 255, 45, false);
+      this.cameras.main.shake(600, .018);
+      this.tweens.add({ targets: this.toon, y: 550, alpha: .08, duration: 700, ease: "Quad.in" });
+    }
+    this.time.delayedCall(850, () => this.showEnding(won));
+  }
+
+  private showEnding(won: boolean) {
+    const { width, height } = this.scale;
+    if (won) {
+      this.add.image(width / 2, height / 2, "chapter3-victory").setDisplaySize(width, height).setDepth(30);
+      this.add.rectangle(width / 2, 78, width, 156, 0x06100a, .68).setDepth(31);
+      this.add.rectangle(width / 2, height - 77, width, 154, 0x06100a, .6).setDepth(31);
+    } else {
+      this.add.rectangle(width / 2, height / 2, width, height, 0x021409, .73).setDepth(30);
+      this.add.rectangle(width / 2, height / 2, 710, 330, 0x020706, .86).setStrokeStyle(3, 0x58d53f, .75).setDepth(31);
+    }
+    this.add.text(width / 2, won ? 30 : height / 2 - 96, won ? "THE TOON LIVES" : "TOO LATE", { fontFamily: "Arial Black", fontSize: won ? "46px" : "54px", color: won ? "#efffd4" : "#9eff7a", stroke: "#001708", strokeThickness: 8 }).setOrigin(.5, won ? 0 : .5).setDepth(32);
+    this.add.text(width / 2, won ? 90 : height / 2 - 27, won ? "You reached the vat before the Dip did." : "The memory dissolves again. Run sooner.", { fontFamily: "Georgia", fontSize: "24px", color: "#ecf5df", stroke: "#001408", strokeThickness: 5 }).setOrigin(.5).setDepth(32);
+    const buttonY = won ? height - 75 : height / 2 + 70;
+    const button = this.add.rectangle(width / 2, buttonY, 294, 66, 0x296d2b, 1).setStrokeStyle(3, 0xcaffaa, 1).setInteractive({ useHandCursor: true }).setDepth(32);
+    this.add.text(width / 2, buttonY, won ? "CONTINUE" : "TRY AGAIN", { fontFamily: "Arial Black", fontSize: "22px", color: "#f1ffe5", stroke: "#001205", strokeThickness: 5 }).setOrigin(.5).setDepth(33);
+    button.on("pointerdown", () => won ? this.scene.start("menu") : this.scene.restart());
+    this.add.text(width / 2, won ? height - 27 : height / 2 + 126, "M: CHAPTER SELECT", { fontFamily: "Arial Black", fontSize: "12px", color: "#c4d9ba", stroke: "#000", strokeThickness: 3 }).setOrigin(.5).setDepth(32);
+  }
+
+  private makeDipMist() {
+    for (let i = 0; i < 32; i++) {
+      const mist = this.add.circle(Phaser.Math.Between(930, 1260), Phaser.Math.Between(260, 560), Phaser.Math.Between(2, 7), 0x62ff3e, Phaser.Math.FloatBetween(.12, .42)).setDepth(4);
+      this.tweens.add({ targets: mist, y: mist.y - Phaser.Math.Between(80, 180), x: mist.x + Phaser.Math.Between(-35, 35), alpha: 0, duration: Phaser.Math.Between(1200, 2600), delay: Phaser.Math.Between(0, 1800), repeat: -1 });
+    }
   }
 }
 
@@ -867,4 +1042,4 @@ class SwampRescue extends Phaser.Scene {
   }
 }
 
-new Phaser.Game({ type: Phaser.AUTO, parent: "game", width: 1280, height: 720, backgroundColor: "#07100f", scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH }, scene: [ChapterSelect, SwampRescue, ChapterTwoBattle, BonusHealing] });
+new Phaser.Game({ type: Phaser.AUTO, parent: "game", width: 1280, height: 720, backgroundColor: "#07100f", scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH }, scene: [ChapterSelect, SwampRescue, ChapterTwoBattle, BonusHealing, ChapterThreeRescue] });
