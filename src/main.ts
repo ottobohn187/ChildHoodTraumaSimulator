@@ -491,6 +491,9 @@ class BonusHealing extends Phaser.Scene {
     this.load.image("bonus-flashlight", "assets/bonus-flashlight.png");
     this.load.image("bonus-birthday", "assets/bonus-birthday.png");
     this.load.image("bonus-apology", "assets/bonus-apology.png");
+    this.load.image("bonus-bike", "assets/bonus-bike.png");
+    this.load.image("bonus-emotional-dad", "assets/bonus-emotional-dad.png");
+    this.load.image("bonus-no-strings", "assets/bonus-no-strings.png");
     this.load.audio("bonus-music", "assets/bonus-past-lives.mp3");
     this.load.audio("bonus-love", "assets/bonus-voice-love.mp3");
     this.load.audio("bonus-milk-voice", "assets/bonus-voice-milk.mp3");
@@ -500,6 +503,9 @@ class BonusHealing extends Phaser.Scene {
     this.load.audio("bonus-flashlight-voice", "assets/bonus-voice-flashlight.mp3");
     this.load.audio("bonus-birthday-voice", "assets/bonus-voice-birthday.mp3");
     this.load.audio("bonus-apology-voice", "assets/bonus-voice-apology.mp3");
+    this.load.audio("bonus-bike-voice", "assets/bonus-voice-bike.mp3");
+    this.load.audio("bonus-emotional-voice", "assets/bonus-voice-emotional.mp3");
+    this.load.audio("bonus-no-strings-voice", "assets/bonus-voice-no-strings.mp3");
   }
 
   create() {
@@ -534,6 +540,9 @@ class BonusHealing extends Phaser.Scene {
       { image: "bonus-flashlight", audio: "bonus-flashlight-voice", title: "BONUS HEALING  •  THE FLASHLIGHT", quote: "“Perfect. Thanks, buddy. I love you.”" },
       { image: "bonus-birthday", audio: "bonus-birthday-voice", title: "BONUS HEALING  •  THE BIRTHDAY CALL", quote: "“I called just to tell you happy birthday.”" },
       { image: "bonus-apology", audio: "bonus-apology-voice", title: "BONUS HEALING  •  HE TOOK RESPONSIBILITY", quote: "“I was wrong, and it wasn't your fault. Sometimes, I don't know how to handle my feelings. I hope you forgive me.”" },
+      { image: "bonus-bike", audio: "bonus-bike-voice", title: "BONUS HEALING  •  LEARNING TO RIDE A BIKE", quote: "“I've got you. Keep going... you're doing it.”" },
+      { image: "bonus-emotional-dad", audio: "bonus-emotional-voice", title: "BONUS HEALING  •  EMOTIONALLY AVAILABLE DAD", quote: "“You don't have to hide how you feel. I'm here. Tell me.”" },
+      { image: "bonus-no-strings", audio: "bonus-no-strings-voice", title: "BONUS HEALING  •  NO STRINGS ATTACHED", quote: "“You don't owe me anything. I love you because you're you.”" },
     ];
     const scene = scenes[this.step];
     const backdrop = this.add.rectangle(width / 2, height / 2, width, height, 0x030303, 1);
