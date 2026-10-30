@@ -213,9 +213,10 @@ class ChapterTwoBattle extends Phaser.Scene {
     this.attackClock += 420;
     this.status.setText("TAIL STRIKE! KEEP THE RHYTHM!");
     this.comboText.setText("TAIL FORCE 0 / 6");
-    this.tweens.add({ targets: this.mother, x: this.mother.x - 45, angle: -7, duration: 120, yoyo: true, ease: "Back.out" });
-    this.tweens.add({ targets: this.rex, x: this.rex.x - 70, angle: -5, duration: 180, yoyo: true, ease: "Quad.out" });
-    this.cameras.main.shake(160, .009);
+    this.animateTailWhip();
+    this.tweens.add({ targets: this.rex, x: this.rex.x - 105, y: this.rex.y - 18, angle: -9, duration: 210, yoyo: true, ease: "Back.out" });
+    this.cameras.main.flash(90, 255, 185, 70, false);
+    this.cameras.main.shake(210, .014);
     this.throwDebris(530, 430);
     this.updateBattleUI();
   }
@@ -240,9 +241,11 @@ class ChapterTwoBattle extends Phaser.Scene {
     this.attackClock = Phaser.Math.Between(1150, 1500);
     this.battle = rexAttack(this.battle);
     this.status.setText("HE BITES — FIGHT BACK FASTER!");
-    this.tweens.add({ targets: this.rex, x: this.rex.x + 105, scaleX: 1.04, duration: 150, yoyo: true, ease: "Power2" });
-    this.tweens.add({ targets: this.mother, x: this.mother.x + 30, alpha: .48, duration: 90, yoyo: true, repeat: 1 });
-    this.cameras.main.shake(220, .012);
+    const rexStart = this.rex.x;
+    this.tweens.add({ targets: this.rex, x: rexStart + 190, y: this.rex.y - 8, scaleX: 1.08, scaleY: .97, duration: 170, hold: 115, yoyo: true, ease: "Power3", onYoyo: () => this.sprayBlood(665, 385) });
+    this.tweens.add({ targets: this.mother, x: this.mother.x + 52, angle: 4, tint: 0xb72c24, duration: 105, hold: 120, yoyo: true, ease: "Back.out", onComplete: () => this.mother.clearTint() });
+    this.cameras.main.flash(135, 145, 0, 0, false);
+    this.cameras.main.shake(300, .02);
     this.updateBattleUI();
   }
 
@@ -300,6 +303,27 @@ class ChapterTwoBattle extends Phaser.Scene {
       const rock = this.add.rectangle(x, y, Phaser.Math.Between(5, 13), Phaser.Math.Between(5, 13), 0x35130c).setRotation(Phaser.Math.FloatBetween(0, 3));
       this.tweens.add({ targets: rock, x: x + Phaser.Math.Between(-100, 90), y: y + Phaser.Math.Between(-120, -35), angle: Phaser.Math.Between(-180, 180), alpha: 0, duration: 550, onComplete: () => rock.destroy() });
     }
+  }
+
+  private animateTailWhip() {
+    const ghostA = this.add.image(this.mother.x, this.mother.y, "chapter2-mother").setDisplaySize(720, 480).setAlpha(.2).setTint(0xffb35a).setAngle(10).setDepth(this.mother.depth - 1);
+    const ghostB = this.add.image(this.mother.x - 28, this.mother.y, "chapter2-mother").setDisplaySize(720, 480).setAlpha(.3).setTint(0xffd68a).setAngle(4).setDepth(this.mother.depth - 1);
+    const trail = this.add.graphics().setDepth(this.mother.depth + 1);
+    trail.lineStyle(18, 0xff9b3d, .48).beginPath().arc(790, 430, 285, 3.45, 5.05, false).strokePath();
+    trail.lineStyle(7, 0xffe1a0, .8).beginPath().arc(790, 430, 250, 3.4, 5.0, false).strokePath();
+    this.mother.setAngle(11).setX(this.mother.x + 24);
+    this.tweens.add({ targets: this.mother, x: this.mother.x - 92, angle: -12, duration: 115, hold: 55, yoyo: true, ease: "Expo.out" });
+    this.tweens.add({ targets: [ghostA, ghostB, trail], alpha: 0, duration: 260, onComplete: () => { ghostA.destroy(); ghostB.destroy(); trail.destroy(); } });
+  }
+
+  private sprayBlood(x: number, y: number) {
+    for (let i = 0; i < 34; i++) {
+      const size = Phaser.Math.Between(3, 11);
+      const drop = this.add.ellipse(x, y, size, size * Phaser.Math.FloatBetween(.45, 1.7), i % 5 === 0 ? 0x6b0505 : 0xc41414, Phaser.Math.FloatBetween(.72, 1)).setDepth(15).setRotation(Phaser.Math.FloatBetween(0, 3));
+      this.tweens.add({ targets: drop, x: x + Phaser.Math.Between(-150, 120), y: y + Phaser.Math.Between(-135, 100), angle: Phaser.Math.Between(-220, 220), scale: Phaser.Math.FloatBetween(.45, 1.5), alpha: 0, duration: Phaser.Math.Between(520, 880), ease: "Quad.out", onComplete: () => drop.destroy() });
+    }
+    const wound = this.add.ellipse(x + 34, y + 8, 72, 28, 0x8f0909, .72).setDepth(14).setRotation(-.25);
+    this.tweens.add({ targets: wound, alpha: 0, scaleX: 1.45, duration: 900, onComplete: () => wound.destroy() });
   }
 }
 
