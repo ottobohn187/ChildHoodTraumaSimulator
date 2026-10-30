@@ -92,22 +92,23 @@ class ChapterSelect extends Phaser.Scene {
   private makeChapterRail() {
     const chapterThreeAvailable = DEBUG_UNLOCK_CHAPTER_THREE || this.bonusDone;
     const chapterFourAvailable = DEBUG_UNLOCK_CHAPTER_FOUR || this.chapterThreeHealed;
-    const labels = [this.chapterOneHealed ? "1. HEALED" : "1. ARTAX", "2. UNLOCKED", this.chapterThreeHealed ? "3. HEALED" : chapterThreeAvailable ? "3. DIP RESCUE" : "3. LOCKED", this.chapterFourHealed ? "4. HEALED" : chapterFourAvailable ? "4. OLD YELLER" : "4. LOCKED", "BONUS 4", "6. LOCKED"];
+    const labels = [this.chapterOneHealed ? "1. HEALED" : "1. ARTAX", "2. UNLOCKED", this.chapterThreeHealed ? "3. HEALED" : chapterThreeAvailable ? "3. DIP RESCUE" : "3. LOCKED", this.chapterFourHealed ? "4. HEALED" : chapterFourAvailable ? "4. OLD YELLER" : "4. LOCKED", "BONUS 4", "5. BAMBI"];
     labels.forEach((label, i) => {
       const x = 36 + i * 202;
       const chapterThree = i === 2 && chapterThreeAvailable;
       const chapterFour = i === 3 && chapterFourAvailable;
       const chapterFourBonus = i === 4;
-      const available = chapterThree || chapterFour || chapterFourBonus;
+      const chapterFive = i === 5;
+      const available = chapterThree || chapterFour || chapterFourBonus || chapterFive;
       const rail = this.add.rectangle(x, 584, 184, 91, i === 0 ? 0x24312e : available ? 0x183224 : 0x0b0e0d, .96).setOrigin(0).setStrokeStyle(i === 0 ? 4 : available ? 3 : 2, i === 0 ? 0xc92c26 : available ? 0x71d86f : 0x474c49, 1);
       this.add.text(x + 92, 644, label, { fontFamily: "Arial Black", fontSize: "13px", color: i === 0 ? "#f0e7d4" : available ? "#c9f5b9" : "#676c69" }).setOrigin(.5);
       if (i > 0 && i !== 1 && !available) this.add.text(x + 92, 614, "🔒", { fontSize: "22px" }).setOrigin(.5);
-      if (i === 1 || available) this.add.text(x + 92, 614, chapterFourBonus ? "VIEW" : available ? "RUN" : "✓", { fontFamily: "Arial Black", fontSize: available ? "17px" : "24px", color: "#b8dda8" }).setOrigin(.5);
+      if (i === 1 || available) this.add.text(x + 92, 614, chapterFourBonus ? "VIEW" : chapterFive ? "JUMP" : available ? "RUN" : "✓", { fontFamily: "Arial Black", fontSize: available ? "17px" : "24px", color: "#b8dda8" }).setOrigin(.5);
       if (available) {
         rail.setInteractive({ useHandCursor: true });
         rail.on("pointerover", () => rail.setStrokeStyle(5, 0xa5ff91, 1));
         rail.on("pointerout", () => rail.setStrokeStyle(3, 0x71d86f, 1));
-        rail.on("pointerdown", () => this.gender ? this.scene.start(chapterFourBonus ? "chapter4bonus" : chapterFour ? "chapter4" : "chapter3") : this.showGenderPrompt());
+        rail.on("pointerdown", () => this.gender ? this.scene.start(chapterFive ? "chapter5" : chapterFourBonus ? "chapter4bonus" : chapterFour ? "chapter4" : "chapter3") : this.showGenderPrompt());
       }
     });
   }
@@ -1351,4 +1352,145 @@ class SwampRescue extends Phaser.Scene {
   }
 }
 
-new Phaser.Game({ type: Phaser.AUTO, parent: "game", width: 1280, height: 720, backgroundColor: "#07100f", scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH }, scene: [ChapterSelect, SwampRescue, ChapterTwoBattle, BonusHealing, ChapterThreeRescue, ChapterFourRescue, ChapterFourBonus] });
+class ChapterFiveRun extends Phaser.Scene {
+  private mother!: Phaser.GameObjects.Image;
+  private logs: Phaser.GameObjects.Image[] = [];
+  private timerText!: Phaser.GameObjects.Text;
+  private jumpText!: Phaser.GameObjects.Text;
+  private jumpButton!: Phaser.GameObjects.Container;
+  private mainMusic!: Phaser.Sound.BaseSound;
+  private winningMusic!: Phaser.Sound.BaseSound;
+  private elapsed = 0;
+  private jumps = 0;
+  private spawnClock = 0;
+  private started = false;
+  private ended = false;
+  private jumping = false;
+
+  constructor() { super("chapter5"); }
+
+  preload() {
+    this.load.image("chapter5-forest", "assets/chapter5-forest.png");
+    this.load.image("chapter5-mother", "assets/chapter5-mother.png");
+    this.load.image("chapter5-log", "assets/chapter5-log.png");
+    this.load.image("chapter5-victory", "assets/chapter5-victory.png");
+    this.load.image("chapter5-failure", "assets/chapter5-failure.png");
+    this.load.audio("chapter5-main", "assets/chapter5-main.mp3");
+    this.load.audio("chapter5-winning", "assets/chapter5-winning.mp3");
+    this.load.audio("chapter5-shotgun", "assets/chapter4-shotgunblast.mp3");
+  }
+
+  create() {
+    const { width, height } = this.scale;
+    this.elapsed = 0; this.jumps = 0; this.spawnClock = 0; this.started = false; this.ended = false; this.jumping = false; this.logs = [];
+    this.add.image(width / 2, height / 2, "chapter5-forest").setDisplaySize(width, height);
+    this.add.rectangle(width / 2, height / 2, width, height, 0x07101b, .12);
+    this.mother = this.add.image(520, 500, "chapter5-mother").setDisplaySize(335, 223).setDepth(8);
+    for (let i = 0; i < 42; i++) {
+      const snow = this.add.circle(Phaser.Math.Between(0, width), Phaser.Math.Between(0, height), Phaser.Math.Between(1, 4), 0xe9f4ff, Phaser.Math.FloatBetween(.25, .75)).setDepth(9);
+      this.tweens.add({ targets: snow, x: snow.x - Phaser.Math.Between(90, 250), y: height + 20, duration: Phaser.Math.Between(2200, 5200), delay: Phaser.Math.Between(0, 1800), repeat: -1 });
+    }
+    this.add.rectangle(width / 2, 65, width, 130, 0x03070d, .82).setDepth(20);
+    this.add.text(28, 13, "CHAPTER 5", { fontFamily: "Arial Black", fontSize: "17px", color: "#c7dded", stroke: "#000", strokeThickness: 4 }).setDepth(21);
+    this.add.text(28, 38, "RUN, MOTHER — RUN", { fontFamily: "Arial Black", fontSize: "34px", color: "#f2f7fb", stroke: "#07101a", strokeThickness: 7 }).setDepth(21);
+    this.add.text(30, 88, "Twenty seconds. Ten logs. One missed jump changes everything.", { fontFamily: "Georgia", fontSize: "17px", color: "#c8d8e4" }).setDepth(21);
+    this.timerText = this.add.text(width - 30, 17, "00:20", { fontFamily: "Arial Black", fontSize: "38px", color: "#ffffff", stroke: "#000", strokeThickness: 7 }).setOrigin(1, 0).setDepth(21);
+    this.jumpText = this.add.text(width - 30, 72, "LOGS CLEARED  0 / 10", { fontFamily: "Arial Black", fontSize: "14px", color: "#d9edf8", stroke: "#000", strokeThickness: 4 }).setOrigin(1, 0).setDepth(21);
+    this.jumpButton = this.makeJumpButton(width / 2, 650);
+    this.mainMusic = this.sound.add("chapter5-main", { volume: .64 });
+    this.winningMusic = this.sound.add("chapter5-winning", { volume: .64 });
+    this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE).on("down", () => this.jump());
+    this.input.keyboard!.on("keydown-M", () => this.scene.start("menu"));
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.sound.stopAll());
+  }
+
+  update(_time: number, delta: number) {
+    if (!this.started || this.ended) return;
+    const seconds = delta / 1000;
+    this.elapsed += seconds;
+    this.spawnClock -= seconds;
+    if (this.spawnClock <= 0 && this.jumps + this.logs.length < 10) {
+      this.spawnLog();
+      this.spawnClock = 1.7;
+    }
+    for (const log of [...this.logs]) {
+      log.x -= 520 * seconds;
+      if (!log.getData("passed") && log.x < this.mother.x - 155) {
+        log.setData("passed", true);
+        this.jumps += 1;
+        this.jumpText.setText(`LOGS CLEARED  ${this.jumps} / 10`);
+        this.cameras.main.flash(80, 190, 235, 255, false);
+        if (this.jumps >= 10) { this.finish(true); return; }
+      }
+      if (!log.getData("passed") && Math.abs(log.x - this.mother.x) < 145 && this.mother.y > 415) {
+        this.finish(false); return;
+      }
+      if (log.x < -260) { this.logs.splice(this.logs.indexOf(log), 1); log.destroy(); }
+    }
+    const remaining = Math.max(0, 20 - this.elapsed);
+    this.timerText.setText(`00:${Math.ceil(remaining).toString().padStart(2, "0")}`);
+    this.mother.setAngle(Math.sin(this.elapsed * 14) * 2.2);
+    if (remaining <= 0) this.finish(this.jumps >= 10);
+  }
+
+  private makeJumpButton(x: number, y: number) {
+    const ring = this.add.circle(0, 0, 59, 0x08131d, .94).setStrokeStyle(5, 0xbde8ff, 1);
+    const core = this.add.circle(0, 0, 45, 0x376c87, 1).setStrokeStyle(3, 0xe2f5ff, 1).setInteractive({ useHandCursor: true });
+    const label = this.add.text(0, -7, "JUMP!", { fontFamily: "Arial Black", fontSize: "19px", color: "#fff", stroke: "#071018", strokeThickness: 5 }).setOrigin(.5);
+    const hint = this.add.text(0, 18, "CLICK / SPACE", { fontFamily: "Arial Black", fontSize: "8px", color: "#d8effb" }).setOrigin(.5);
+    core.on("pointerdown", () => this.jump());
+    this.tweens.add({ targets: ring, scale: 1.1, alpha: .58, duration: 480, yoyo: true, repeat: -1 });
+    return this.add.container(x, y, [ring, core, label, hint]).setDepth(22);
+  }
+
+  private jump() {
+    if (this.ended || this.jumping) return;
+    if (!this.started) {
+      this.started = true;
+      this.mainMusic.play({ seek: 30 });
+      this.spawnLog();
+      this.spawnClock = 1.7;
+    }
+    this.jumping = true;
+    this.tweens.add({ targets: this.mother, y: 335, angle: -6, duration: 300, ease: "Sine.Out", yoyo: true, hold: 130, onComplete: () => { this.mother.setY(500).setAngle(0); this.jumping = false; } });
+    this.tweens.add({ targets: this.jumpButton, scale: .86, duration: 60, yoyo: true });
+  }
+
+  private spawnLog() {
+    const log = this.add.image(1400, 555, "chapter5-log").setDisplaySize(270, 90).setDepth(7).setData("passed", false);
+    this.logs.push(log);
+  }
+
+  private finish(won: boolean) {
+    if (this.ended) return;
+    this.ended = true;
+    this.mainMusic.stop();
+    this.tweens.killTweensOf(this.mother);
+    if (won) {
+      this.time.delayedCall(350, () => this.showEnding(true));
+    } else {
+      this.sound.play("chapter5-shotgun", { volume: .98 });
+      this.cameras.main.flash(140, 255, 245, 225, false);
+      this.cameras.main.shake(520, .026);
+      this.tweens.add({ targets: this.mother, y: 555, angle: 76, alpha: .35, duration: 240 });
+      const black = this.add.rectangle(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, 0x000000, 1).setDepth(100).setAlpha(0);
+      this.time.delayedCall(220, () => black.setAlpha(1));
+      this.time.delayedCall(2200, () => { black.destroy(); this.showEnding(false); });
+    }
+  }
+
+  private showEnding(won: boolean) {
+    const { width, height } = this.scale;
+    if (won) this.winningMusic.play({ seek: 30, loop: true });
+    this.add.image(width / 2, height / 2, won ? "chapter5-victory" : "chapter5-failure").setDisplaySize(width, height).setDepth(40);
+    this.add.rectangle(width / 2, 72, width, 144, 0x020508, .72).setDepth(41);
+    this.add.rectangle(width / 2, height - 91, width, 182, 0x020508, .72).setDepth(41);
+    this.add.text(width / 2, 26, won ? "SHE MADE IT HOME" : "ONE LOG. ONE SHOT.", { fontFamily: "Arial Black", fontSize: "43px", color: won ? "#fff4c7" : "#d8e1e8", stroke: "#000", strokeThickness: 8 }).setOrigin(.5, 0).setDepth(42);
+    this.add.text(width / 2, 82, won ? "Bambi gets to grow up with his mother." : "She fell in the snow. Try the run again.", { fontFamily: "Georgia", fontSize: "23px", color: "#edf3f7", stroke: "#000", strokeThickness: 5 }).setOrigin(.5).setDepth(42);
+    const button = this.add.rectangle(width / 2, height - 80, 300, 64, 0x376c87, 1).setStrokeStyle(3, 0xd9f2ff, 1).setInteractive({ useHandCursor: true }).setDepth(42);
+    this.add.text(width / 2, height - 80, won ? "CONTINUE" : "TRY AGAIN", { fontFamily: "Arial Black", fontSize: "21px", color: "#fff", stroke: "#071018", strokeThickness: 5 }).setOrigin(.5).setDepth(43);
+    button.on("pointerdown", () => won ? this.scene.start("menu") : this.scene.restart());
+  }
+}
+
+new Phaser.Game({ type: Phaser.AUTO, parent: "game", width: 1280, height: 720, backgroundColor: "#07100f", scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH }, scene: [ChapterSelect, SwampRescue, ChapterTwoBattle, BonusHealing, ChapterThreeRescue, ChapterFourRescue, ChapterFourBonus, ChapterFiveRun] });
