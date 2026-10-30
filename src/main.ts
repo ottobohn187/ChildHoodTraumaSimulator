@@ -1,10 +1,12 @@
 import Phaser from "phaser";
 import "./style.css";
 import { canRescue, rescuePhase, stepTapRescue, tapPull, type RescueState } from "./game/rescuePhysics";
+import { battleOutcome, rexAttack, tailStrike, type BattleState } from "./game/chapter2Physics";
 
 type PlayerGender = "male" | "female";
 const PROFILE_KEY = "trauma-player-gender";
 const CHAPTER_ONE_HEALED_KEY = "trauma-chapter-1-healed";
+const CHAPTER_TWO_HEALED_KEY = "trauma-chapter-2-healed";
 
 class ChapterSelect extends Phaser.Scene {
   private gender: PlayerGender | null = null;
@@ -16,6 +18,7 @@ class ChapterSelect extends Phaser.Scene {
     this.load.image("swamp", "assets/swamp-background.png");
     this.load.image("victory", "assets/childhood-healing-victory.png");
     this.load.image("artax", "assets/artax-separated-v2.png");
+    this.load.image("chapter2-arena", "assets/chapter2-volcanic-arena.png");
   }
 
   create() {
@@ -62,12 +65,13 @@ class ChapterSelect extends Phaser.Scene {
   }
 
   private makeChapterTwoCard(x: number, y: number, w: number, h: number) {
-    this.add.image(x + w / 2, y + h / 2, "victory").setDisplaySize(w, h).setAlpha(.18);
-    this.add.rectangle(x, y, w, h, 0x050606, this.chapterOneHealed ? .52 : .72).setOrigin(0).setStrokeStyle(2, this.chapterOneHealed ? 0xc5a964 : 0x606663, .8);
+    this.add.image(x + w / 2, y + h / 2, "chapter2-arena").setDisplaySize(w, h).setAlpha(this.chapterOneHealed ? .62 : .18);
+    const card = this.add.rectangle(x, y, w, h, 0x050606, this.chapterOneHealed ? .52 : .72).setOrigin(0).setStrokeStyle(2, this.chapterOneHealed ? 0xc5a964 : 0x606663, .8);
+    if (this.chapterOneHealed) card.setInteractive({ useHandCursor: true }).on("pointerdown", () => this.scene.start("chapter2"));
     this.add.text(x + 24, y + 20, "CHAPTER 2", { fontFamily: "Arial Black", fontSize: "20px", color: this.chapterOneHealed ? "#d6c49b" : "#777e79" });
     this.add.text(x + 24, y + 54, this.chapterOneHealed ? "MEMORY UNLOCKED" : "LOCKED MEMORY", { fontFamily: "Arial Black", fontSize: "31px", color: this.chapterOneHealed ? "#eee4ce" : "#929894", stroke: "#000", strokeThickness: 5 });
     this.add.text(x + w / 2, y + h / 2 + 12, this.chapterOneHealed ? "II" : "🔒", { fontFamily: "Georgia", fontStyle: "bold", fontSize: "68px", color: "#d8c084" }).setOrigin(.5);
-    this.add.text(x + w / 2, y + h - 48, this.chapterOneHealed ? "COMING SOON" : "HEAL CHAPTER 1 TO CONTINUE", { fontFamily: "Arial Black", fontSize: "14px", color: this.chapterOneHealed ? "#e2ca8e" : "#777e79" }).setOrigin(.5);
+    this.add.text(x + w / 2, y + h - 48, this.chapterOneHealed ? "CLICK TO FIGHT" : "HEAL CHAPTER 1 TO CONTINUE", { fontFamily: "Arial Black", fontSize: "14px", color: this.chapterOneHealed ? "#e2ca8e" : "#777e79" }).setOrigin(.5);
   }
 
   private makeChapterRail() {
@@ -98,6 +102,160 @@ class ChapterSelect extends Phaser.Scene {
     const female = makeChoice(width / 2 + 120, "FEMALE", "female");
     const note = this.add.text(width / 2, height / 2 + 111, "Saved only on this device. You can change it anytime.", { fontFamily: "Georgia", fontSize: "14px", color: "#87918c" }).setOrigin(.5);
     overlay.add([block, panel, title, copy, ...male, ...female, note]);
+  }
+}
+
+class ChapterTwoBattle extends Phaser.Scene {
+  private battle: BattleState = { motherHealth: 100, rexHealth: 100 };
+  private ended = false;
+  private pressTimes: number[] = [];
+  private attackClock = 1450;
+  private mother!: Phaser.GameObjects.Image;
+  private rex!: Phaser.GameObjects.Image;
+  private motherBar!: Phaser.GameObjects.Rectangle;
+  private rexBar!: Phaser.GameObjects.Rectangle;
+  private comboText!: Phaser.GameObjects.Text;
+  private status!: Phaser.GameObjects.Text;
+  private strikeButton!: Phaser.GameObjects.Container;
+
+  constructor() { super("chapter2"); }
+
+  init() {
+    this.battle = { motherHealth: 100, rexHealth: 100 };
+    this.ended = false;
+    this.pressTimes = [];
+    this.attackClock = 1450;
+  }
+
+  preload() {
+    this.load.image("chapter2-arena", "assets/chapter2-volcanic-arena.png");
+    this.load.image("chapter2-mother", "assets/chapter2-mother.png");
+    this.load.image("chapter2-rex", "assets/chapter2-rex.png");
+  }
+
+  create() {
+    const { width, height } = this.scale;
+    this.add.image(width / 2, height / 2, "chapter2-arena").setDisplaySize(width, height);
+    this.add.rectangle(width / 2, height / 2, width, height, 0x260503, .15);
+    this.makeAsh();
+    this.rex = this.add.image(300, 425, "chapter2-rex").setDisplaySize(650, 366);
+    this.mother = this.add.image(930, 420, "chapter2-mother").setDisplaySize(720, 480);
+
+    this.add.rectangle(width / 2, 67, width, 134, 0x120403, .84);
+    this.add.text(28, 15, "CHAPTER 2", { fontFamily: "Arial Black", fontSize: "17px", color: "#e0be82" });
+    this.add.text(28, 40, "THE FIGHT SHE FINISHES", { fontFamily: "Arial Black", fontSize: "31px", color: "#fff0d1", stroke: "#230000", strokeThickness: 6 });
+    this.add.text(30, 86, "Build a rapid rhythm. Six presses unleash her tail.", { fontFamily: "Georgia", fontSize: "16px", color: "#dbc9b1" });
+
+    this.makeHealthMeter(28, 128, "SHARPTOOTH", 0xb72222);
+    this.rexBar = this.add.rectangle(30, 158, 410, 20, 0xb72222).setOrigin(0, .5);
+    this.makeHealthMeter(width - 440, 128, "LITTLEFOOT'S MOM", 0x69a75b);
+    this.motherBar = this.add.rectangle(width - 438, 158, 410, 20, 0x69a75b).setOrigin(0, .5);
+
+    this.status = this.add.text(width / 2, 543, "PRESS FAST — DO NOT LET HIM REACH HER", { fontFamily: "Arial Black", fontSize: "19px", color: "#fff0ce", stroke: "#210000", strokeThickness: 5 }).setOrigin(.5);
+    this.comboText = this.add.text(width / 2, 574, "TAIL FORCE 0 / 6", { fontFamily: "Arial Black", fontSize: "14px", color: "#e4bd75", stroke: "#000", strokeThickness: 4 }).setOrigin(.5);
+    this.strikeButton = this.makeStrikeButton(width / 2, 650);
+    this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE).on("down", () => this.press());
+    this.input.keyboard!.on("keydown-M", () => this.scene.start("menu"));
+  }
+
+  private makeHealthMeter(x: number, y: number, label: string, color: number) {
+    this.add.text(x, y - 24, label, { fontFamily: "Arial Black", fontSize: "15px", color: "#f1dfc4", stroke: "#000", strokeThickness: 4 });
+    this.add.rectangle(x, y + 30, 414, 24, 0x0d0807, .94).setOrigin(0, .5).setStrokeStyle(2, 0xe1bd7c, .9);
+    this.add.rectangle(x + 2, y + 30, 410, 20, color, .2).setOrigin(0, .5);
+  }
+
+  private makeStrikeButton(x: number, y: number) {
+    const ring = this.add.circle(0, 0, 55, 0x160807, .95).setStrokeStyle(5, 0xf0bd5f, 1);
+    const core = this.add.circle(0, 0, 42, 0x9b271d, 1).setStrokeStyle(3, 0xffe0a1, 1).setInteractive({ useHandCursor: true });
+    const label = this.add.text(0, -7, "STRIKE", { fontFamily: "Arial Black", fontSize: "18px", color: "#fff2d5", stroke: "#000", strokeThickness: 4 }).setOrigin(.5);
+    const hint = this.add.text(0, 18, "CLICK / SPACE", { fontFamily: "Arial Black", fontSize: "8px", color: "#e8ce96" }).setOrigin(.5);
+    core.on("pointerdown", () => this.press());
+    this.tweens.add({ targets: ring, scale: 1.08, alpha: .72, duration: 500, yoyo: true, repeat: -1 });
+    return this.add.container(x, y, [ring, core, label, hint]);
+  }
+
+  private press() {
+    if (this.ended) return;
+    const now = this.time.now;
+    this.pressTimes = this.pressTimes.filter(t => now - t <= 750);
+    this.pressTimes.push(now);
+    this.comboText.setText(`TAIL FORCE ${Math.min(this.pressTimes.length, 6)} / 6`);
+    this.tweens.add({ targets: this.strikeButton, scale: .87, duration: 55, yoyo: true });
+    if (this.pressTimes.length < 6) return;
+    this.pressTimes = [];
+    this.battle = tailStrike(this.battle);
+    this.attackClock += 420;
+    this.status.setText("TAIL STRIKE! KEEP THE RHYTHM!");
+    this.comboText.setText("TAIL FORCE 0 / 6");
+    this.tweens.add({ targets: this.mother, x: this.mother.x - 45, angle: -7, duration: 120, yoyo: true, ease: "Back.out" });
+    this.tweens.add({ targets: this.rex, x: this.rex.x - 70, angle: -5, duration: 180, yoyo: true, ease: "Quad.out" });
+    this.cameras.main.shake(160, .009);
+    this.throwDebris(530, 430);
+    this.updateBattleUI();
+  }
+
+  update(_time: number, delta: number) {
+    if (this.ended) return;
+    const now = this.time.now;
+    this.pressTimes = this.pressTimes.filter(t => now - t <= 750);
+    this.comboText.setText(`TAIL FORCE ${Math.min(this.pressTimes.length, 6)} / 6`);
+    this.attackClock -= delta;
+    if (this.attackClock <= 0) this.predatorAttack();
+  }
+
+  private predatorAttack() {
+    this.attackClock = Phaser.Math.Between(1150, 1500);
+    this.battle = rexAttack(this.battle);
+    this.status.setText("HE BITES — FIGHT BACK FASTER!");
+    this.tweens.add({ targets: this.rex, x: this.rex.x + 105, scaleX: 1.04, duration: 150, yoyo: true, ease: "Power2" });
+    this.tweens.add({ targets: this.mother, x: this.mother.x + 30, alpha: .48, duration: 90, yoyo: true, repeat: 1 });
+    this.cameras.main.shake(220, .012);
+    this.updateBattleUI();
+  }
+
+  private updateBattleUI() {
+    this.rexBar.width = 410 * this.battle.rexHealth / 100;
+    this.motherBar.width = 410 * this.battle.motherHealth / 100;
+    const outcome = battleOutcome(this.battle);
+    if (outcome !== "fighting") this.finish(outcome === "won");
+  }
+
+  private finish(won: boolean) {
+    this.ended = true;
+    if (won) localStorage.setItem(CHAPTER_TWO_HEALED_KEY, "true");
+    this.tweens.killTweensOf([this.rex, this.mother]);
+    if (won) {
+      this.tweens.add({ targets: this.rex, x: -220, angle: -18, alpha: .15, duration: 1300, ease: "Quad.in" });
+      this.tweens.add({ targets: this.mother, x: this.mother.x - 55, duration: 700, ease: "Back.out" });
+    } else {
+      this.tweens.add({ targets: this.mother, y: this.mother.y + 190, angle: 8, alpha: .2, duration: 1500, ease: "Quad.in" });
+    }
+    this.time.delayedCall(850, () => this.showBattleEnding(won));
+  }
+
+  private showBattleEnding(won: boolean) {
+    const { width, height } = this.scale;
+    this.add.rectangle(width / 2, height / 2, width, height, 0x100201, .82).setDepth(20);
+    this.add.text(width / 2, height / 2 - 100, won ? "SHE SURVIVES" : "SHE FALLS AGAIN", { fontFamily: "Arial Black", fontSize: "49px", color: won ? "#f4d68a" : "#c9b5aa", stroke: "#250000", strokeThickness: 8 }).setOrigin(.5).setDepth(21);
+    this.add.text(width / 2, height / 2 - 34, won ? "This time, the fight ends differently." : "The memory is unchanged. Get back up and rewrite it.", { fontFamily: "Georgia", fontSize: "23px", color: "#f2dfc5" }).setOrigin(.5).setDepth(21);
+    const button = this.add.rectangle(width / 2, height / 2 + 70, 280, 68, 0x8d271d, 1).setStrokeStyle(3, 0xf4cf83, 1).setDepth(21).setInteractive({ useHandCursor: true });
+    this.add.text(width / 2, height / 2 + 70, won ? "CONTINUE" : "RETRY", { fontFamily: "Arial Black", fontSize: "23px", color: "#fff0d0", stroke: "#000", strokeThickness: 4 }).setOrigin(.5).setDepth(22);
+    button.on("pointerdown", () => won ? this.scene.start("menu") : this.scene.restart());
+    this.add.text(width / 2, height / 2 + 130, "M: CHAPTER SELECT", { fontFamily: "Arial Black", fontSize: "12px", color: "#bcae99" }).setOrigin(.5).setDepth(21);
+  }
+
+  private makeAsh() {
+    for (let i = 0; i < 55; i++) {
+      const ash = this.add.circle(Phaser.Math.Between(0, 1280), Phaser.Math.Between(-100, 720), Phaser.Math.Between(1, 3), 0x1a0c08, Phaser.Math.FloatBetween(.2, .65));
+      this.tweens.add({ targets: ash, x: ash.x - Phaser.Math.Between(80, 190), y: 760, duration: Phaser.Math.Between(2600, 5200), repeat: -1, delay: Phaser.Math.Between(0, 2400) });
+    }
+  }
+
+  private throwDebris(x: number, y: number) {
+    for (let i = 0; i < 9; i++) {
+      const rock = this.add.rectangle(x, y, Phaser.Math.Between(5, 13), Phaser.Math.Between(5, 13), 0x35130c).setRotation(Phaser.Math.FloatBetween(0, 3));
+      this.tweens.add({ targets: rock, x: x + Phaser.Math.Between(-100, 90), y: y + Phaser.Math.Between(-120, -35), angle: Phaser.Math.Between(-180, 180), alpha: 0, duration: 550, onComplete: () => rock.destroy() });
+    }
   }
 }
 
@@ -351,4 +509,4 @@ class SwampRescue extends Phaser.Scene {
   }
 }
 
-new Phaser.Game({ type: Phaser.AUTO, parent: "game", width: 1280, height: 720, backgroundColor: "#07100f", scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH }, scene: [ChapterSelect, SwampRescue] });
+new Phaser.Game({ type: Phaser.AUTO, parent: "game", width: 1280, height: 720, backgroundColor: "#07100f", scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH }, scene: [ChapterSelect, SwampRescue, ChapterTwoBattle] });
