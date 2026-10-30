@@ -128,6 +128,11 @@ class ChapterTwoBattle extends Phaser.Scene {
   private fightMusic!: Phaser.Sound.BaseSound;
   private winningMusic!: Phaser.Sound.BaseSound;
   private failureMusic!: Phaser.Sound.BaseSound;
+  private firstBloodCalled = false;
+  private hitStreak = 0;
+  private called30 = false;
+  private called10 = false;
+  private announcerBanner?: Phaser.GameObjects.Text;
 
   constructor() { super("chapter2"); }
 
@@ -138,6 +143,10 @@ class ChapterTwoBattle extends Phaser.Scene {
     this.remainingTime = 45;
     this.pressTimes = [];
     this.attackClock = 1450;
+    this.firstBloodCalled = false;
+    this.hitStreak = 0;
+    this.called30 = false;
+    this.called10 = false;
   }
 
   preload() {
@@ -154,6 +163,14 @@ class ChapterTwoBattle extends Phaser.Scene {
     this.load.audio("chapter2-winning-music", "assets/chapter2-winning-cover.mp3");
     this.load.audio("chapter2-failure-music", "assets/chapter2-failure-cover.mp3");
     this.load.spritesheet("blood-squirt-right", "assets/blood-squirt-right.png", { frameWidth: 512, frameHeight: 512 });
+    this.load.audio("sfx-failed", "assets/sfx-failed.wav");
+    this.load.audio("sfx-firstblood", "assets/sfx-firstblood.wav");
+    this.load.audio("sfx-dominating", "assets/sfx-dominating.wav");
+    this.load.audio("sfx-cd30", "assets/sfx-cd30.wav");
+    this.load.audio("sfx-cd10", "assets/sfx-cd10.wav");
+    this.load.audio("sfx-ultrakill", "assets/sfx-ultrakill.wav");
+    this.load.audio("sfx-winner", "assets/sfx-winner.wav");
+    this.load.audio("sfx-lostmatch", "assets/sfx-lostmatch.wav");
   }
 
   create() {
@@ -221,6 +238,12 @@ class ChapterTwoBattle extends Phaser.Scene {
     if (this.pressTimes.length < 6) return;
     this.pressTimes = [];
     this.battle = tailStrike(this.battle);
+    this.announceFirstBlood();
+    this.hitStreak += 1;
+    if (this.hitStreak === 3 && this.battle.rexHealth > 0) {
+      this.playAnnouncer("sfx-dominating");
+      this.showAnnouncerBanner("DOMINATING", "#ffb52e");
+    }
     this.attackClock += 420;
     this.status.setText("TAIL STRIKE! KEEP THE RHYTHM!");
     this.comboText.setText("TAIL FORCE 0 / 6");
@@ -236,6 +259,16 @@ class ChapterTwoBattle extends Phaser.Scene {
     if (this.ended || !this.started) return;
     this.remainingTime = Math.max(0, this.remainingTime - delta / 1000);
     this.timerText.setText(`00:${Math.ceil(this.remainingTime).toString().padStart(2, "0")}`);
+    if (!this.called30 && this.remainingTime <= 30) {
+      this.called30 = true;
+      this.playAnnouncer("sfx-cd30");
+      this.showAnnouncerBanner("30 SECONDS REMAIN", "#ffd075");
+    }
+    if (!this.called10 && this.remainingTime <= 10) {
+      this.called10 = true;
+      this.playAnnouncer("sfx-cd10");
+      this.showAnnouncerBanner("10 SECONDS REMAIN", "#ff6655");
+    }
     if (this.remainingTime <= 0) {
       this.status.setText("TIME RAN OUT — HE REACHES HER");
       this.finish(false);
@@ -251,6 +284,8 @@ class ChapterTwoBattle extends Phaser.Scene {
   private predatorAttack() {
     this.attackClock = Phaser.Math.Between(1150, 1500);
     this.battle = rexAttack(this.battle);
+    this.announceFirstBlood();
+    this.hitStreak = 0;
     this.status.setText("HE BITES — FIGHT BACK FASTER!");
     const rexStart = this.rex.x;
     this.rex.setTexture("chapter2-rex-windup").setDisplaySize(650, 366);
@@ -274,7 +309,6 @@ class ChapterTwoBattle extends Phaser.Scene {
   private finish(won: boolean) {
     this.ended = true;
     this.fightMusic.stop();
-    if (won) this.winningMusic.play({ volume: .58 });
     if (won) localStorage.setItem(CHAPTER_TWO_HEALED_KEY, "true");
     this.tweens.killTweensOf([this.rex, this.mother]);
     if (won) {
@@ -283,7 +317,22 @@ class ChapterTwoBattle extends Phaser.Scene {
     } else {
       this.tweens.add({ targets: this.mother, y: this.mother.y + 190, angle: 8, alpha: .2, duration: 1500, ease: "Quad.in" });
     }
-    this.time.delayedCall(850, () => this.showBattleEnding(won));
+    if (won) {
+      this.showAnnouncerBanner("ULTRAKILL", "#ff2b20");
+      this.playAnnouncer("sfx-ultrakill", () => {
+        this.showAnnouncerBanner("YOU WON", "#ffe08a");
+        this.playAnnouncer("sfx-winner", () => {
+          this.winningMusic.play({ volume: .58 });
+          this.showBattleEnding(true);
+        });
+      });
+    } else {
+      this.showAnnouncerBanner("FAILED", "#d9d9d9");
+      this.playAnnouncer("sfx-failed", () => {
+        this.showAnnouncerBanner("MATCH LOST", "#c7b9b4");
+        this.playAnnouncer("sfx-lostmatch", () => this.showBattleEnding(false));
+      });
+    }
   }
 
   private showBattleEnding(won: boolean) {
@@ -345,6 +394,26 @@ class ChapterTwoBattle extends Phaser.Scene {
     }
     const wound = this.add.ellipse(x + 34, y + 8, 72, 28, 0x8f0909, .72).setDepth(14).setRotation(-.25);
     this.tweens.add({ targets: wound, alpha: 0, scaleX: 1.45, duration: 900, onComplete: () => wound.destroy() });
+  }
+
+  private announceFirstBlood() {
+    if (this.firstBloodCalled) return;
+    this.firstBloodCalled = true;
+    this.playAnnouncer("sfx-firstblood");
+    this.showAnnouncerBanner("FIRST BLOOD", "#ff3c2f");
+  }
+
+  private playAnnouncer(key: string, onComplete?: () => void) {
+    const sound = this.sound.add(key, { volume: .95 });
+    sound.once(Phaser.Sound.Events.COMPLETE, () => { onComplete?.(); sound.destroy(); });
+    sound.play();
+  }
+
+  private showAnnouncerBanner(message: string, color: string) {
+    this.announcerBanner?.destroy();
+    const banner = this.add.text(this.scale.width / 2, 238, message, { fontFamily: "Arial Black", fontSize: "43px", color, stroke: "#180000", strokeThickness: 9, letterSpacing: 3 }).setOrigin(.5).setDepth(40).setScale(.45).setAlpha(0);
+    this.announcerBanner = banner;
+    this.tweens.add({ targets: banner, scale: 1, alpha: 1, duration: 140, ease: "Back.out", hold: 700, yoyo: true, onComplete: () => { banner.destroy(); if (this.announcerBanner === banner) this.announcerBanner = undefined; } });
   }
 }
 
