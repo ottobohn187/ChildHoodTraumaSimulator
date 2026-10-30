@@ -864,7 +864,7 @@ class ChapterFourRescue extends Phaser.Scene {
 }
 
 const CHAPTER_FOUR_HEALING_MOMENTS = [
-  ["THE DEBT COLLECTOR", "Remember that $200 I borrowed in 2011? Here's $300 with interest.", "💵"],
+  ["THE DEBT COLLECTOR", "Remember that $200 I borrowed in 2001? Here's $300 with interest.", "💵"],
   ["THE FOOD SHARER", "Someone opens a bag of fries and immediately offers you some. The GOOD fries at the bottom.", "🍟"],
   ["THE EX-GIRLFRIEND", "Honestly, you were the best I ever had. I messed up.", "☎"],
   ["THE GROUP PROJECT", "Every team member does their share of the work. Nobody needs reminding.", "✓"],
