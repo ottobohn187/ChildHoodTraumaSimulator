@@ -31,13 +31,7 @@ class ChapterSelect extends Phaser.Scene {
     this.bonusDone = localStorage.getItem(BONUS_DONE_KEY) === "true";
     this.add.image(width / 2, height / 2, "swamp").setDisplaySize(width, height).setAlpha(.34);
     this.add.rectangle(width / 2, height / 2, width, height, 0x030606, .67);
-    this.add.rectangle(width / 2, 76, width, 152, 0x020303, .86);
-
-    this.add.text(42, 18, "CHILDHOOD", { fontFamily: "Arial Black", fontSize: "49px", color: "#e8e2d6", stroke: "#000", strokeThickness: 8 }).setScale(1.03, 1);
-    this.add.text(407, 18, "TRAUMA", { fontFamily: "Arial Black", fontSize: "49px", color: "#cf2923", stroke: "#250000", strokeThickness: 8 });
-    this.add.text(47, 78, "S I M U L A T O R", { fontFamily: "Arial Black", fontSize: "20px", color: "#d8d0c0", letterSpacing: 10 });
-    this.add.text(width - 42, 38, "RELIVE IT.  RESCUE THEM.  REWRITE IT.", { fontFamily: "Georgia", fontStyle: "italic", fontSize: "22px", color: "#d8c9ad" }).setOrigin(1, 0);
-    this.add.text(width - 42, 76, "CHOOSE A CHAPTER OF YOUR TRAUMA", { fontFamily: "Arial Black", fontSize: "14px", color: "#9eaaa4" }).setOrigin(1, 0);
+    this.makeMenuHeader(width);
 
     this.makeChapterCard(36, 174, 748, 390);
     this.makeChapterTwoCard(808, 174, 436, 390);
@@ -48,6 +42,27 @@ class ChapterSelect extends Phaser.Scene {
     }).setOrigin(1, .5).setInteractive({ useHandCursor: true });
     profile.on("pointerdown", () => this.showGenderPrompt());
     if (!this.gender) this.showGenderPrompt();
+  }
+
+  private makeMenuHeader(width: number) {
+    this.add.rectangle(width / 2, 72, width, 144, 0x020303, .93).setStrokeStyle(2, 0x26302e, .8);
+    this.add.rectangle(width / 2, 138, width, 10, 0x0a1413, .98);
+
+    const childhood = this.add.text(28, 13, "CHILDHOOD", { fontFamily: "Arial Black", fontSize: "53px", color: "#e9e4d8", stroke: "#090909", strokeThickness: 9 }).setScale(1.02, 1);
+    const trauma = this.add.text(350, 13, "TRAUMA", { fontFamily: "Arial Black", fontSize: "53px", color: "#df211d", stroke: "#250000", strokeThickness: 9 });
+    this.add.text(154, 77, "S I M U L A T O R", { fontFamily: "Arial Black", fontSize: "18px", color: "#ddd5c7", stroke: "#000", strokeThickness: 3, letterSpacing: 8 });
+
+    for (let i = 0; i < 18; i++) {
+      const target = i % 2 === 0 ? childhood : trauma;
+      this.add.rectangle(target.x + Phaser.Math.Between(12, Math.max(20, target.width - 12)), Phaser.Math.Between(24, 64), Phaser.Math.Between(3, 13), Phaser.Math.Between(1, 3), i % 2 === 0 ? 0x303331 : 0x5c0908, .68).setRotation(Phaser.Math.FloatBetween(-.25, .25));
+    }
+
+    this.add.text(670, 25, "Relive the moments\n   that ruined a generation.", { fontFamily: "Segoe Print, Comic Sans MS, Georgia", fontStyle: "italic", fontSize: "20px", color: "#dbc9ad", stroke: "#090909", strokeThickness: 3, lineSpacing: 2 }).setRotation(-.025);
+
+    const paper = this.add.rectangle(0, 0, 196, 116, 0xcdbb99, .96).setStrokeStyle(2, 0x5f523f, .9);
+    const pin = this.add.rectangle(0, -54, 34, 7, 0x8d7455, .85);
+    const list = this.add.text(-75, -43, "□ PLAY\n□ CRY\n□ REPEAT", { fontFamily: "Segoe Print, Comic Sans MS, Georgia", fontSize: "18px", color: "#2b2620", lineSpacing: 5 });
+    this.add.container(width - 110, 67, [paper, pin, list]).setRotation(-.075);
   }
 
   private makeChapterCard(x: number, y: number, w: number, h: number) {
