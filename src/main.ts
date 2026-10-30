@@ -144,6 +144,7 @@ class ChapterTwoBattle extends Phaser.Scene {
     this.load.image("chapter2-mother", "assets/chapter2-mother.png");
     this.load.image("chapter2-rex", "assets/chapter2-rex.png");
     this.load.image("chapter2-victory", "assets/chapter2-sunset-victory.png");
+    this.load.image("chapter2-failure", "assets/chapter2-failure-rain.png");
     this.load.audio("chapter2-fight-music", "assets/chapter2-fight-cover.mp3");
     this.load.audio("chapter2-winning-music", "assets/chapter2-winning-cover.mp3");
   }
@@ -274,7 +275,9 @@ class ChapterTwoBattle extends Phaser.Scene {
       this.add.rectangle(width / 2, 80, width, 160, 0x1b0903, .68).setDepth(21);
       this.add.rectangle(width / 2, height - 80, width, 160, 0x1b0903, .52).setDepth(21);
     } else {
-      this.add.rectangle(width / 2, height / 2, width, height, 0x100201, .82).setDepth(20);
+      this.add.image(width / 2, height / 2, "chapter2-failure").setDisplaySize(width, height).setDepth(20);
+      this.add.rectangle(width / 2, height / 2, width, height, 0x02060d, .2).setDepth(21);
+      this.add.rectangle(width / 2, height / 2, 680, 330, 0x04070b, .72).setDepth(21);
     }
     this.add.text(width / 2, won ? 31 : height / 2 - 100, won ? "THEY WALK AWAY TOGETHER" : "SHE FALLS AGAIN", { fontFamily: "Arial Black", fontSize: won ? "40px" : "49px", color: won ? "#fff0bd" : "#c9b5aa", stroke: "#250000", strokeThickness: 8 }).setOrigin(.5, won ? 0 : .5).setDepth(22);
     this.add.text(width / 2, won ? 84 : height / 2 - 34, won ? "This time, Littlefoot gets to keep his mother." : "The memory is unchanged. Get back up and rewrite it.", { fontFamily: "Georgia", fontSize: "23px", color: "#f2dfc5", stroke: "#250000", strokeThickness: 4 }).setOrigin(.5).setDepth(22);
