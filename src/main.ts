@@ -127,6 +127,7 @@ class ChapterTwoBattle extends Phaser.Scene {
   private timerText!: Phaser.GameObjects.Text;
   private fightMusic!: Phaser.Sound.BaseSound;
   private winningMusic!: Phaser.Sound.BaseSound;
+  private failureMusic!: Phaser.Sound.BaseSound;
 
   constructor() { super("chapter2"); }
 
@@ -147,6 +148,7 @@ class ChapterTwoBattle extends Phaser.Scene {
     this.load.image("chapter2-failure", "assets/chapter2-failure-rain.png");
     this.load.audio("chapter2-fight-music", "assets/chapter2-fight-cover.mp3");
     this.load.audio("chapter2-winning-music", "assets/chapter2-winning-cover.mp3");
+    this.load.audio("chapter2-failure-music", "assets/chapter2-failure-cover.mp3");
   }
 
   create() {
@@ -176,6 +178,7 @@ class ChapterTwoBattle extends Phaser.Scene {
     this.input.keyboard!.on("keydown-M", () => this.scene.start("menu"));
     this.fightMusic = this.sound.add("chapter2-fight-music");
     this.winningMusic = this.sound.add("chapter2-winning-music");
+    this.failureMusic = this.sound.add("chapter2-failure-music");
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.sound.stopAll());
   }
 
@@ -279,8 +282,9 @@ class ChapterTwoBattle extends Phaser.Scene {
       this.add.rectangle(width / 2, height - 80, width, 160, 0x1b0903, .52).setDepth(21);
     } else {
       this.add.image(width / 2, height / 2, "chapter2-failure").setDisplaySize(width, height).setDepth(20);
-      this.add.rectangle(width / 2, height / 2, width, height, 0x02060d, .2).setDepth(21);
-      this.add.rectangle(width / 2, height / 2, 680, 330, 0x04070b, .72).setDepth(21);
+      this.add.rectangle(width / 2, height / 2, width, height, 0x02060d, .06).setDepth(21);
+      this.add.rectangle(width / 2, height / 2, 680, 330, 0x04070b, .38).setDepth(21);
+      this.failureMusic.play({ volume: .58, seek: 11, loop: true });
     }
     this.add.text(width / 2, won ? 31 : height / 2 - 100, won ? "THEY WALK AWAY TOGETHER" : "SHE FALLS AGAIN", { fontFamily: "Arial Black", fontSize: won ? "40px" : "49px", color: won ? "#fff0bd" : "#c9b5aa", stroke: "#250000", strokeThickness: 8 }).setOrigin(.5, won ? 0 : .5).setDepth(22);
     this.add.text(width / 2, won ? 84 : height / 2 - 34, won ? "This time, Littlefoot gets to keep his mother." : "The memory is unchanged. Get back up and rewrite it.", { fontFamily: "Georgia", fontSize: "23px", color: "#f2dfc5", stroke: "#250000", strokeThickness: 4 }).setOrigin(.5).setDepth(22);
