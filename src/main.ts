@@ -658,7 +658,7 @@ class ChapterThreeRescue extends Phaser.Scene {
     const buttonY = won ? height - 75 : height / 2 + 70;
     const button = this.add.rectangle(width / 2, buttonY, 294, 66, 0x296d2b, 1).setStrokeStyle(3, 0xcaffaa, 1).setInteractive({ useHandCursor: true }).setDepth(32);
     this.add.text(width / 2, buttonY, won ? "CONTINUE" : "TRY AGAIN", { fontFamily: "Arial Black", fontSize: "22px", color: "#f1ffe5", stroke: "#001205", strokeThickness: 5 }).setOrigin(.5).setDepth(33);
-    button.on("pointerdown", () => won ? this.scene.start("menu") : this.scene.restart());
+    button.on("pointerdown", () => won ? this.scene.start("chapter4bonus") : this.scene.restart());
     this.add.text(width / 2, won ? height - 27 : height / 2 + 126, "M: CHAPTER SELECT", { fontFamily: "Arial Black", fontSize: "12px", color: "#c4d9ba", stroke: "#000", strokeThickness: 3 }).setOrigin(.5).setDepth(32);
   }
 
@@ -852,6 +852,104 @@ class ChapterFourRescue extends Phaser.Scene {
       const seed = this.add.ellipse(Phaser.Math.Between(-100, 1280), Phaser.Math.Between(220, 650), Phaser.Math.Between(5, 12), 2, 0xe6c483, Phaser.Math.FloatBetween(.2, .55)).setDepth(4);
       this.tweens.add({ targets: seed, x: 1380, y: seed.y - Phaser.Math.Between(10, 55), alpha: 0, duration: Phaser.Math.Between(1800, 3800), delay: Phaser.Math.Between(0, 2500), repeat: -1 });
     }
+  }
+}
+
+const CHAPTER_FOUR_HEALING_MOMENTS = [
+  ["THE DEBT COLLECTOR", "Remember that $200 I borrowed in 2011? Here's $300 with interest.", "💵"],
+  ["THE FOOD SHARER", "Someone opens a bag of fries and immediately offers you some. The GOOD fries at the bottom.", "🍟"],
+  ["THE EX-GIRLFRIEND", "Honestly, you were the best I ever had. I messed up.", "☎"],
+  ["THE GROUP PROJECT", "Every team member does their share of the work. Nobody needs reminding.", "✓"],
+  ["THE LAST SLICE", "Everyone at the pizza party insists you take the last slice.", "🍕"],
+  ["THE MECHANIC", "Actually, it was just a loose wire. No charge.", "🔧"],
+  ["THE JOB INTERVIEW", "We reviewed your qualifications. You're overqualified, so we're offering you more money.", "💼"],
+  ["THE PARENT APOLOGY", "Mom says, ‘You were right. I should have listened.’ No excuses.", "♥"],
+  ["THE SCHOOL BULLY", "I was insecure. You didn't deserve that.", "🤝"],
+  ["THE RESTAURANT BILL", "Someone already paid for your meal. No strings attached.", "🍽"],
+  ["THE TEXT MESSAGE", "Someone actually texts you first and asks how you're doing.", "✉"],
+  ["THE PARTY INVITATION", "Friends invite you somewhere, and they genuinely want you there.", "🎉"],
+  ["THE BOSS", "You work too hard. Take Friday off. Paid.", "☀"],
+  ["THE BORROWED TOOL", "Your neighbor returns your socket set, cleaned, with every socket present.", "🧰"],
+  ["THE ARGUMENT", "You know what? You were right. I'm sorry. No follow-up argument.", "🕊"],
+  ["THE COMPLIMENT", "A stranger compliments your shirt, and they're not trying to sell you anything.", "★"],
+  ["THE MOVING DAY", "Six friends show up with trucks. Nobody suddenly has a back injury.", "🚚"],
+  ["THE REFUND", "Customer service says, ‘You're absolutely right. Here's your money back.’", "↩"],
+  ["THE BEST FRIEND", "Your friend defends you when you're not in the room.", "🛡"],
+  ["THE REUNION", "Your high school crush admits, ‘I actually had a huge crush on you back then.’", "♥"],
+] as const;
+
+class ChapterFourBonus extends Phaser.Scene {
+  private step = 0;
+  private panel?: Phaser.GameObjects.Container;
+  private advanceTimer?: Phaser.Time.TimerEvent;
+  private music?: Phaser.Sound.BaseSound;
+
+  constructor() { super("chapter4bonus"); }
+
+  preload() {
+    this.load.image("chapter4-bonus-debt", "assets/chapter4-bonus-debt.png");
+    this.load.audio("chapter4-bonus-music", "assets/chapter4-bonus-please-hold-me.mp3");
+  }
+
+  create() {
+    this.step = 0;
+    this.music = this.sound.add("chapter4-bonus-music", { volume: .6, loop: true });
+    this.music.play();
+    this.showMoment();
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.sound.stopAll());
+  }
+
+  private showMoment() {
+    this.panel?.destroy(true);
+    this.advanceTimer?.remove(false);
+    const { width, height } = this.scale;
+    const [title, quote, icon] = CHAPTER_FOUR_HEALING_MOMENTS[this.step];
+    const items: Phaser.GameObjects.GameObject[] = [];
+
+    if (this.step === 0) {
+      items.push(this.add.image(0, 0, "chapter4-bonus-debt").setOrigin(0).setDisplaySize(width, height));
+    } else {
+      const background = this.add.graphics();
+      const hue = Phaser.Display.Color.HSVToRGB((this.step * .071) % 1, .42, .28).color;
+      background.fillGradientStyle(0x080a12, hue, 0x17101c, 0x090d13, 1);
+      background.fillRect(0, 0, width, height);
+      items.push(background);
+      for (let i = 0; i < 18; i++) {
+        items.push(this.add.circle(Phaser.Math.Between(20, 1260), Phaser.Math.Between(110, 680), Phaser.Math.Between(2, 7), 0xffd28a, Phaser.Math.FloatBetween(.08, .3)));
+      }
+      items.push(this.add.text(width / 2, 298, icon, { fontSize: "150px" }).setOrigin(.5).setAlpha(.78));
+    }
+
+    items.push(this.add.rectangle(width / 2, 64, width, 128, 0x05070b, .82));
+    items.push(this.add.rectangle(width / 2, 580, 1060, 218, 0x07090d, .82).setStrokeStyle(2, 0xe2b870, .7));
+    items.push(this.add.text(34, 18, "AFTER CHAPTER 4  •  THE HEALING MOMENT", { fontFamily: "Arial Black", fontSize: "17px", color: "#e8bf7d", stroke: "#000", strokeThickness: 4 }));
+    items.push(this.add.text(34, 48, `${this.step + 1}. ${title}`, { fontFamily: "Arial Black", fontSize: "34px", color: "#fff3d4", stroke: "#000", strokeThickness: 7 }));
+    const countdown = this.add.text(width - 34, 30, "10", { fontFamily: "Arial Black", fontSize: "43px", color: "#f2c57d", stroke: "#000", strokeThickness: 6 }).setOrigin(1, 0);
+    items.push(countdown);
+    items.push(this.add.text(width / 2, 530, quote, { fontFamily: "Georgia", fontStyle: "italic", fontSize: "28px", align: "center", color: "#fff7e7", stroke: "#000", strokeThickness: 5, wordWrap: { width: 900 } }).setOrigin(.5, 0));
+    const isLast = this.step === CHAPTER_FOUR_HEALING_MOMENTS.length - 1;
+    const button = this.add.rectangle(width / 2, 675, 250, 54, 0x8e5e27, 1).setStrokeStyle(3, 0xffd997, 1).setInteractive({ useHandCursor: true });
+    items.push(button, this.add.text(width / 2, 675, isLast ? "CONTINUE" : "NEXT MOMENT", { fontFamily: "Arial Black", fontSize: "18px", color: "#fff6e2", stroke: "#2a1202", strokeThickness: 4 }).setOrigin(.5));
+    button.on("pointerdown", () => this.advance());
+    this.panel = this.add.container(0, 0, items);
+
+    let seconds = 10;
+    this.advanceTimer = this.time.addEvent({ delay: 1000, repeat: 9, callback: () => {
+      seconds -= 1;
+      countdown.setText(seconds.toString());
+      if (seconds === 0) this.advance();
+    }});
+  }
+
+  private advance() {
+    this.advanceTimer?.remove(false);
+    if (this.step >= CHAPTER_FOUR_HEALING_MOMENTS.length - 1) {
+      this.sound.stopAll();
+      this.scene.start("menu");
+      return;
+    }
+    this.step += 1;
+    this.showMoment();
   }
 }
 
@@ -1257,4 +1355,4 @@ class SwampRescue extends Phaser.Scene {
   }
 }
 
-new Phaser.Game({ type: Phaser.AUTO, parent: "game", width: 1280, height: 720, backgroundColor: "#07100f", scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH }, scene: [ChapterSelect, SwampRescue, ChapterTwoBattle, BonusHealing, ChapterThreeRescue, ChapterFourRescue] });
+new Phaser.Game({ type: Phaser.AUTO, parent: "game", width: 1280, height: 720, backgroundColor: "#07100f", scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH }, scene: [ChapterSelect, SwampRescue, ChapterTwoBattle, BonusHealing, ChapterThreeRescue, ChapterFourRescue, ChapterFourBonus] });
