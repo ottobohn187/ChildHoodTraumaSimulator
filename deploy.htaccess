@@ -1,0 +1,8 @@
+RewriteEngine On
+
+# Redirect cPanel's temporary default-page URL to the deployed game.
+RewriteRule ^cgi-sys/defaultwebpage\.cgi$ https://trauma.ottobohn.com/ [R=302,L]
+
+# Keep all normal traffic on HTTPS.
+RewriteCond %{HTTPS} !=on
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]

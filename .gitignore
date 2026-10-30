@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.codex-doc-review/
+*.tsbuildinfo
+*.zip
+.env
+.env.*
+!.env.example
+
