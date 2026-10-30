@@ -469,6 +469,9 @@ class BonusHealing extends Phaser.Scene {
   private panel?: Phaser.GameObjects.Container;
   private step = 0;
   private gender: PlayerGender = "male";
+  private music?: Phaser.Sound.BaseSound;
+  private voice?: Phaser.Sound.BaseSound;
+  private advanceTimer?: Phaser.Time.TimerEvent;
 
   constructor() { super("bonus"); }
 
@@ -478,20 +481,40 @@ class BonusHealing extends Phaser.Scene {
     this.load.image("bonus-milk", "assets/bonus-milk.png");
     this.load.image("bonus-porch-boy", "assets/bonus-porch-boy.png");
     this.load.image("bonus-porch-girl", "assets/bonus-porch-girl.png");
+    this.load.image("bonus-safe-boy", "assets/bonus-safe-boy.png");
+    this.load.image("bonus-safe-girl", "assets/bonus-safe-girl.png");
+    this.load.image("bonus-game-boy", "assets/bonus-game-boy.png");
+    this.load.image("bonus-game-girl", "assets/bonus-game-girl.png");
+    this.load.image("bonus-flashlight", "assets/bonus-flashlight.png");
+    this.load.image("bonus-birthday", "assets/bonus-birthday.png");
+    this.load.image("bonus-apology", "assets/bonus-apology.png");
+    this.load.audio("bonus-music", "assets/bonus-past-lives.mp3");
     this.load.audio("bonus-love", "assets/bonus-voice-love.mp3");
     this.load.audio("bonus-milk-voice", "assets/bonus-voice-milk.mp3");
     this.load.audio("bonus-grass", "assets/bonus-voice-grass.mp3");
+    this.load.audio("bonus-safe-voice", "assets/bonus-voice-safe.mp3");
+    this.load.audio("bonus-game-voice", "assets/bonus-voice-game.mp3");
+    this.load.audio("bonus-flashlight-voice", "assets/bonus-voice-flashlight.mp3");
+    this.load.audio("bonus-birthday-voice", "assets/bonus-voice-birthday.mp3");
+    this.load.audio("bonus-apology-voice", "assets/bonus-voice-apology.mp3");
   }
 
   create() {
     this.step = 0;
     this.gender = localStorage.getItem(PROFILE_KEY) === "female" ? "female" : "male";
+    this.music = this.sound.add("bonus-music", { volume: .3, loop: true });
+    this.music.play();
     this.showStep();
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.sound.stopAll());
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.advanceTimer?.remove(false);
+      this.sound.stopAll();
+    });
   }
 
   private showStep() {
-    this.sound.stopAll();
+    this.advanceTimer?.remove(false);
+    this.voice?.stop();
+    this.voice?.destroy();
     this.panel?.destroy(true);
     const { width, height } = this.scale;
     const isGirl = this.gender === "female";
@@ -499,28 +522,62 @@ class BonusHealing extends Phaser.Scene {
       { image: isGirl ? "bonus-hug-girl" : "bonus-hug-boy", audio: "bonus-love", title: "BONUS HEALING  •  HE STAYED", quote: "“You know... I love you. You're enough. I'm here.”" },
       { image: "bonus-milk", audio: "bonus-milk-voice", title: "BONUS HEALING  •  HE CAME BACK", quote: "“I brought back milk. Tomorrow, breakfast is on me! Cereal, everyone!”" },
       { image: isGirl ? "bonus-porch-girl" : "bonus-porch-boy", audio: "bonus-grass", title: "BONUS HEALING  •  HOME WAS ENOUGH", quote: "“Well... the grass wasn't greener on the other side.”" },
+      { image: isGirl ? "bonus-safe-girl" : "bonus-safe-boy", audio: "bonus-safe-voice", title: "BONUS HEALING  •  THE CYCLE ENDED", quote: "“I won't hit you again. I was wrong. And I love you.”" },
+      { image: isGirl ? "bonus-game-girl" : "bonus-game-boy", audio: "bonus-game-voice", title: "BONUS HEALING  •  HE SHOWED UP", quote: "“I came to your game! I love you! Good catch! Good swing!”" },
+      { image: "bonus-flashlight", audio: "bonus-flashlight-voice", title: "BONUS HEALING  •  THE FLASHLIGHT", quote: "“Perfect. Thanks, buddy. I love you.”" },
+      { image: "bonus-birthday", audio: "bonus-birthday-voice", title: "BONUS HEALING  •  THE BIRTHDAY CALL", quote: "“I called just to tell you happy birthday.”" },
+      { image: "bonus-apology", audio: "bonus-apology-voice", title: "BONUS HEALING  •  HE TOOK RESPONSIBILITY", quote: "“I was wrong, and it wasn't your fault. Sometimes, I don't know how to handle my feelings. I hope you forgive me.”" },
     ];
     const scene = scenes[this.step];
-    const bg = this.add.image(width / 2, height / 2, scene.image).setDisplaySize(width, height);
+    const bg = this.add.image(width / 2, height / 2, scene.image).setDisplaySize(width, height).setAlpha(0);
     const top = this.add.rectangle(width / 2, 66, width, 132, 0x090806, .72);
-    const bottom = this.add.rectangle(width / 2, height - 91, width, 182, 0x090806, .72);
+    const bottom = this.add.rectangle(width / 2, height - 101, width, 202, 0x090806, .74);
     const kicker = this.add.text(30, 18, scene.title, { fontFamily: "Arial Black", fontSize: "25px", color: "#fff0cb", stroke: "#000", strokeThickness: 6 });
-    const count = this.add.text(width - 28, 22, `${this.step + 1} / 3`, { fontFamily: "Arial Black", fontSize: "17px", color: "#d8c49b" }).setOrigin(1, 0);
-    const quote = this.add.text(width / 2, height - 145, scene.quote, { fontFamily: "Georgia", fontStyle: "italic", fontSize: "24px", color: "#fff4dc", stroke: "#000", strokeThickness: 5, align: "center", wordWrap: { width: 1100 } }).setOrigin(.5);
-    const final = this.step === 2;
-    const button = this.add.rectangle(width / 2, height - 61, final ? 370 : 270, 60, 0x6d2a24, 1).setStrokeStyle(3, 0xffdda0, 1).setInteractive({ useHandCursor: true });
-    const buttonText = this.add.text(width / 2, height - 61, final ? "CONTINUE TO CHAPTER 3" : "CONTINUE", { fontFamily: "Arial Black", fontSize: "19px", color: "#fff1d4", stroke: "#000", strokeThickness: 4 }).setOrigin(.5);
-    this.panel = this.add.container(0, 0, [bg, top, bottom, kicker, count, quote, button, buttonText]);
+    const count = this.add.text(width - 28, 22, `${this.step + 1} / ${scenes.length}`, { fontFamily: "Arial Black", fontSize: "17px", color: "#d8c49b" }).setOrigin(1, 0);
+    const countdown = this.add.text(width - 28, 59, "NEXT MEMORY IN 10", { fontFamily: "Arial Black", fontSize: "18px", color: "#fff0cb", stroke: "#000", strokeThickness: 5 }).setOrigin(1, 0);
+    const quote = this.add.text(width / 2, height - 150, scene.quote, { fontFamily: "Georgia", fontStyle: "italic", fontSize: "23px", color: "#fff4dc", stroke: "#000", strokeThickness: 5, align: "center", wordWrap: { width: 1100 } }).setOrigin(.5);
+    const final = this.step === scenes.length - 1;
+    const button = this.add.rectangle(width / 2, height - 55, final ? 370 : 240, 56, 0x6d2a24, 1).setStrokeStyle(3, 0xffdda0, 1).setInteractive({ useHandCursor: true });
+    const buttonText = this.add.text(width / 2, height - 55, final ? "CONTINUE TO CHAPTER 3" : "NEXT MEMORY", { fontFamily: "Arial Black", fontSize: "18px", color: "#fff1d4", stroke: "#000", strokeThickness: 4 }).setOrigin(.5);
+    if (final) {
+      button.setVisible(false);
+      buttonText.setVisible(false);
+    }
+    this.panel = this.add.container(0, 0, [bg, top, bottom, kicker, count, countdown, quote, button, buttonText]);
+    this.tweens.add({ targets: bg, alpha: 1, duration: 850, ease: "Sine.easeOut" });
+    let remaining = 10;
+    const next = () => {
+      if (this.step >= scenes.length - 1) return;
+      this.step += 1;
+      this.showStep();
+    };
     button.on("pointerdown", () => {
       if (final) {
         localStorage.setItem(BONUS_DONE_KEY, "true");
         this.scene.start("menu");
       } else {
-        this.step += 1;
-        this.showStep();
+        next();
       }
     });
-    this.sound.play(scene.audio, { volume: .9 });
+    this.advanceTimer = this.time.addEvent({
+      delay: 1000,
+      repeat: 9,
+      callback: () => {
+        remaining -= 1;
+        if (remaining > 0) {
+          countdown.setText(final ? `CONTINUE UNLOCKS IN ${remaining}` : `NEXT MEMORY IN ${remaining}`);
+        } else if (final) {
+          countdown.setText("WHEN YOU'RE READY");
+          button.setVisible(true);
+          buttonText.setVisible(true);
+        } else {
+          next();
+        }
+      },
+    });
+    countdown.setText(final ? "CONTINUE UNLOCKS IN 10" : "NEXT MEMORY IN 10");
+    this.voice = this.sound.add(scene.audio, { volume: .95, rate: .88 });
+    this.voice.play();
   }
 }
 
