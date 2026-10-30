@@ -694,6 +694,7 @@ class ChapterFourRescue extends Phaser.Scene {
   private runButton!: Phaser.GameObjects.Container;
   private mainMusic!: Phaser.Sound.BaseSound;
   private winningMusic!: Phaser.Sound.BaseSound;
+  private failureMusic!: Phaser.Sound.BaseSound;
 
   constructor() { super("chapter4"); }
 
@@ -709,6 +710,7 @@ class ChapterFourRescue extends Phaser.Scene {
     this.load.image("chapter4-victory", "assets/chapter4-victory.png");
     this.load.audio("chapter4-main-music", "assets/chapter4-main.mp3");
     this.load.audio("chapter4-winning-music", "assets/chapter4-winning.mp3");
+    this.load.audio("chapter4-failure-music", "assets/chapter4-losing.mp3");
   }
 
   create() {
@@ -738,6 +740,7 @@ class ChapterFourRescue extends Phaser.Scene {
 
     this.mainMusic = this.sound.add("chapter4-main-music", { volume: .62 });
     this.winningMusic = this.sound.add("chapter4-winning-music", { volume: .62 });
+    this.failureMusic = this.sound.add("chapter4-failure-music", { volume: .62 });
     this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE).on("down", () => this.pressRun());
     this.input.keyboard!.on("keydown-M", () => this.scene.start("menu"));
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.sound.stopAll());
@@ -831,6 +834,7 @@ class ChapterFourRescue extends Phaser.Scene {
       this.add.rectangle(width / 2, 78, width, 156, 0x1a1007, .65).setDepth(31);
       this.add.rectangle(width / 2, height - 77, width, 154, 0x1a1007, .62).setDepth(31);
     } else {
+      this.failureMusic.play({ seek: 20, loop: true });
       this.add.rectangle(width / 2, height / 2, width, height, 0x060504, .88).setDepth(30);
       this.add.rectangle(width / 2, height / 2, 720, 330, 0x120b07, .96).setStrokeStyle(3, 0x9e6b39, .8).setDepth(31);
     }
