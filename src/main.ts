@@ -711,6 +711,7 @@ class ChapterFourRescue extends Phaser.Scene {
     this.load.audio("chapter4-main-music", "assets/chapter4-main.mp3");
     this.load.audio("chapter4-winning-music", "assets/chapter4-winning.mp3");
     this.load.audio("chapter4-failure-music", "assets/chapter4-losing.mp3");
+    this.load.audio("chapter4-shotgun", "assets/chapter4-shotgunblast.mp3");
   }
 
   create() {
@@ -818,6 +819,7 @@ class ChapterFourRescue extends Phaser.Scene {
       this.time.delayedCall(900, () => this.showEnding(true));
     } else {
       this.status.setText("THE RIFLE FIRES");
+      this.sound.play("chapter4-shotgun", { volume: .95 });
       const flash = this.add.star(1130, 478, 8, 9, 34, 0xffe7a0, 1).setDepth(25);
       this.cameras.main.flash(160, 255, 244, 214, false);
       this.cameras.main.shake(550, .024);
