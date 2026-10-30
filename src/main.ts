@@ -3,20 +3,24 @@ import "./style.css";
 import { canRescue, rescuePhase, stepTapRescue, tapPull, type RescueState } from "./game/rescuePhysics";
 import { battleOutcome, rexAttack, tailStrike, type BattleState } from "./game/chapter2Physics";
 import { DIP_RESCUE_SECONDS, dipRescueOutcome, stepDipRescue, tapRun, type DipRescueState } from "./game/chapter3Physics";
+import { YELLER_RESCUE_SECONDS, stepYellerRescue, tapYellerRun, yellerRescueOutcome, type YellerRescueState } from "./game/chapter4Physics";
 
 type PlayerGender = "male" | "female";
 const PROFILE_KEY = "trauma-player-gender";
 const CHAPTER_ONE_HEALED_KEY = "trauma-chapter-1-healed";
 const CHAPTER_TWO_HEALED_KEY = "trauma-chapter-2-healed";
 const CHAPTER_THREE_HEALED_KEY = "trauma-chapter-3-healed";
+const CHAPTER_FOUR_HEALED_KEY = "trauma-chapter-4-healed";
 const BONUS_DONE_KEY = "trauma-bonus-done";
 const DEBUG_UNLOCK_CHAPTER_TWO = true;
 const DEBUG_UNLOCK_CHAPTER_THREE = true;
+const DEBUG_UNLOCK_CHAPTER_FOUR = true;
 
 class ChapterSelect extends Phaser.Scene {
   private gender: PlayerGender | null = null;
   private chapterOneHealed = false;
   private chapterThreeHealed = false;
+  private chapterFourHealed = false;
   private bonusDone = false;
 
   constructor() { super("menu"); }
@@ -34,6 +38,7 @@ class ChapterSelect extends Phaser.Scene {
     this.gender = localStorage.getItem(PROFILE_KEY) as PlayerGender | null;
     this.chapterOneHealed = localStorage.getItem(CHAPTER_ONE_HEALED_KEY) === "true";
     this.chapterThreeHealed = localStorage.getItem(CHAPTER_THREE_HEALED_KEY) === "true";
+    this.chapterFourHealed = localStorage.getItem(CHAPTER_FOUR_HEALED_KEY) === "true";
     this.bonusDone = localStorage.getItem(BONUS_DONE_KEY) === "true";
     this.add.image(width / 2, height / 2, "swamp").setDisplaySize(width, height).setAlpha(.34);
     this.add.rectangle(width / 2, height / 2, width, height, 0x030606, .67);
@@ -86,19 +91,22 @@ class ChapterSelect extends Phaser.Scene {
 
   private makeChapterRail() {
     const chapterThreeAvailable = DEBUG_UNLOCK_CHAPTER_THREE || this.bonusDone;
-    const labels = [this.chapterOneHealed ? "1. HEALED" : "1. ARTAX", "2. UNLOCKED", this.chapterThreeHealed ? "3. HEALED" : chapterThreeAvailable ? "3. DIP RESCUE" : "3. LOCKED", "4. LOCKED", "5. LOCKED", "6. LOCKED"];
+    const chapterFourAvailable = DEBUG_UNLOCK_CHAPTER_FOUR || this.chapterThreeHealed;
+    const labels = [this.chapterOneHealed ? "1. HEALED" : "1. ARTAX", "2. UNLOCKED", this.chapterThreeHealed ? "3. HEALED" : chapterThreeAvailable ? "3. DIP RESCUE" : "3. LOCKED", this.chapterFourHealed ? "4. HEALED" : chapterFourAvailable ? "4. OLD YELLER" : "4. LOCKED", "5. LOCKED", "6. LOCKED"];
     labels.forEach((label, i) => {
       const x = 36 + i * 202;
       const chapterThree = i === 2 && chapterThreeAvailable;
-      const rail = this.add.rectangle(x, 584, 184, 91, i === 0 ? 0x24312e : chapterThree ? 0x183224 : 0x0b0e0d, .96).setOrigin(0).setStrokeStyle(i === 0 ? 4 : chapterThree ? 3 : 2, i === 0 ? 0xc92c26 : chapterThree ? 0x71d86f : 0x474c49, 1);
-      this.add.text(x + 92, 644, label, { fontFamily: "Arial Black", fontSize: "13px", color: i === 0 ? "#f0e7d4" : chapterThree ? "#c9f5b9" : "#676c69" }).setOrigin(.5);
-      if (i > 0 && i !== 1 && !chapterThree) this.add.text(x + 92, 614, "🔒", { fontSize: "22px" }).setOrigin(.5);
-      if (i === 1 || chapterThree) this.add.text(x + 92, 614, chapterThree ? "RUN" : "✓", { fontFamily: "Arial Black", fontSize: chapterThree ? "17px" : "24px", color: "#b8dda8" }).setOrigin(.5);
-      if (chapterThree) {
+      const chapterFour = i === 3 && chapterFourAvailable;
+      const available = chapterThree || chapterFour;
+      const rail = this.add.rectangle(x, 584, 184, 91, i === 0 ? 0x24312e : available ? 0x183224 : 0x0b0e0d, .96).setOrigin(0).setStrokeStyle(i === 0 ? 4 : available ? 3 : 2, i === 0 ? 0xc92c26 : available ? 0x71d86f : 0x474c49, 1);
+      this.add.text(x + 92, 644, label, { fontFamily: "Arial Black", fontSize: "13px", color: i === 0 ? "#f0e7d4" : available ? "#c9f5b9" : "#676c69" }).setOrigin(.5);
+      if (i > 0 && i !== 1 && !available) this.add.text(x + 92, 614, "🔒", { fontSize: "22px" }).setOrigin(.5);
+      if (i === 1 || available) this.add.text(x + 92, 614, available ? "RUN" : "✓", { fontFamily: "Arial Black", fontSize: available ? "17px" : "24px", color: "#b8dda8" }).setOrigin(.5);
+      if (available) {
         rail.setInteractive({ useHandCursor: true });
         rail.on("pointerover", () => rail.setStrokeStyle(5, 0xa5ff91, 1));
         rail.on("pointerout", () => rail.setStrokeStyle(3, 0x71d86f, 1));
-        rail.on("pointerdown", () => this.gender ? this.scene.start("chapter3") : this.showGenderPrompt());
+        rail.on("pointerdown", () => this.gender ? this.scene.start(chapterFour ? "chapter4" : "chapter3") : this.showGenderPrompt());
       }
     });
   }
@@ -673,6 +681,176 @@ class ChapterThreeRescue extends Phaser.Scene {
   }
 }
 
+class ChapterFourRescue extends Phaser.Scene {
+  private rescue: YellerRescueState = { elapsed: 0, time: YELLER_RESCUE_SECONDS, pace: 0, rawDistance: 0, distance: 0 };
+  private started = false;
+  private ended = false;
+  private runner!: Phaser.GameObjects.Image;
+  private distanceBar!: Phaser.GameObjects.Rectangle;
+  private paceBar!: Phaser.GameObjects.Rectangle;
+  private timerText!: Phaser.GameObjects.Text;
+  private status!: Phaser.GameObjects.Text;
+  private distanceText!: Phaser.GameObjects.Text;
+  private runButton!: Phaser.GameObjects.Container;
+  private mainMusic!: Phaser.Sound.BaseSound;
+  private winningMusic!: Phaser.Sound.BaseSound;
+
+  constructor() { super("chapter4"); }
+
+  init() {
+    this.rescue = { elapsed: 0, time: YELLER_RESCUE_SECONDS, pace: 0, rawDistance: 0, distance: 0 };
+    this.started = false;
+    this.ended = false;
+  }
+
+  preload() {
+    this.load.image("chapter4-farm", "assets/chapter4-farm.png");
+    this.load.image("chapter4-runner", "assets/chapter4-runner.png");
+    this.load.image("chapter4-victory", "assets/chapter4-victory.png");
+    this.load.audio("chapter4-main-music", "assets/chapter4-main.mp3");
+    this.load.audio("chapter4-winning-music", "assets/chapter4-winning.mp3");
+  }
+
+  create() {
+    const { width, height } = this.scale;
+    this.add.image(width / 2, height / 2, "chapter4-farm").setDisplaySize(width, height);
+    this.add.rectangle(width / 2, height / 2, width, height, 0x241407, .08);
+    this.makeWind();
+    this.runner = this.add.image(70, 494, "chapter4-runner").setDisplaySize(230, 201).setDepth(7);
+
+    this.add.rectangle(width / 2, 66, width, 132, 0x100b06, .86).setDepth(10);
+    this.add.text(28, 14, "CHAPTER 4", { fontFamily: "Arial Black", fontSize: "17px", color: "#e4b66f", stroke: "#000", strokeThickness: 4 }).setDepth(11);
+    this.add.text(28, 39, "THE VACCINE RUN", { fontFamily: "Arial Black", fontSize: "31px", color: "#fff0cf", stroke: "#2a1304", strokeThickness: 7 }).setDepth(11);
+    this.add.text(30, 86, "Keep running until 01:30. Reach the boy before he fires.", { fontFamily: "Georgia", fontSize: "16px", color: "#e3d2b7" }).setDepth(11);
+    this.timerText = this.add.text(width - 28, 19, "01:30", { fontFamily: "Arial Black", fontSize: "34px", color: "#ffd28b", stroke: "#281200", strokeThickness: 7 }).setOrigin(1, 0).setDepth(11);
+    this.add.text(width - 28, 66, "THE SHOT COMES WHEN TIME EXPIRES", { fontFamily: "Arial Black", fontSize: "11px", color: "#c8a77a" }).setOrigin(1, 0).setDepth(11);
+
+    this.makeMeter(28, 126, "DISTANCE CLOSED", 0xe4a447);
+    this.distanceBar = this.add.rectangle(30, 158, 330, 20, 0xe4a447).setOrigin(0, .5).setDepth(11);
+    this.distanceBar.width = 0;
+    this.makeMeter(width - 360, 126, "RUNNING PACE", 0x6ca85b);
+    this.paceBar = this.add.rectangle(width - 358, 158, 330, 20, 0x79b963).setOrigin(0, .5).setDepth(11);
+    this.paceBar.width = 0;
+
+    this.status = this.add.text(width / 2, 559, "PRESS RUN TO BEGIN THE 90-SECOND SPRINT", { fontFamily: "Arial Black", fontSize: "19px", color: "#fff4dc", stroke: "#261000", strokeThickness: 6 }).setOrigin(.5).setDepth(12);
+    this.distanceText = this.add.text(width / 2, 588, "THE VACCINE IS STILL 100 METERS AWAY", { fontFamily: "Arial Black", fontSize: "13px", color: "#ecd4ad", stroke: "#201000", strokeThickness: 4 }).setOrigin(.5).setDepth(12);
+    this.runButton = this.makeRunButton(width / 2, 658);
+
+    this.mainMusic = this.sound.add("chapter4-main-music", { volume: .62 });
+    this.winningMusic = this.sound.add("chapter4-winning-music", { volume: .62 });
+    this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE).on("down", () => this.pressRun());
+    this.input.keyboard!.on("keydown-M", () => this.scene.start("menu"));
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.sound.stopAll());
+  }
+
+  update(time: number, delta: number) {
+    if (this.ended || !this.started) return;
+    this.rescue = stepYellerRescue(this.rescue, delta / 1000);
+    const stride = this.rescue.pace / 100;
+    this.runner.setX(70 + this.rescue.distance * 8.75);
+    this.runner.setY(494 + Math.sin(time / 85) * 7 * stride).setAngle(Math.sin(time / 150) * 2.2 * stride);
+    this.updateRescueUI();
+    if (this.rescue.time <= 0) this.finish(yellerRescueOutcome(this.rescue) === "won");
+  }
+
+  private makeMeter(x: number, y: number, label: string, color: number) {
+    this.add.text(x, y - 21, label, { fontFamily: "Arial Black", fontSize: "13px", color: "#f2e5cd", stroke: "#000", strokeThickness: 4 }).setDepth(11);
+    this.add.rectangle(x, y + 32, 334, 24, 0x160f08, .96).setOrigin(0, .5).setStrokeStyle(2, color, .9).setDepth(11);
+  }
+
+  private makeRunButton(x: number, y: number) {
+    const pulse = this.add.circle(0, 0, 58, 0x241507, .92).setStrokeStyle(5, 0xffc15e, 1);
+    const core = this.add.circle(0, 0, 45, 0x8f4f18, 1).setStrokeStyle(3, 0xffe1a5, 1).setInteractive({ useHandCursor: true });
+    const label = this.add.text(0, -7, "RUN!", { fontFamily: "Arial Black", fontSize: "21px", color: "#fff4dc", stroke: "#281100", strokeThickness: 5 }).setOrigin(.5);
+    const hint = this.add.text(0, 18, "CLICK / SPACE", { fontFamily: "Arial Black", fontSize: "8px", color: "#f2d2a0" }).setOrigin(.5);
+    core.on("pointerdown", () => this.pressRun());
+    this.tweens.add({ targets: pulse, scale: 1.1, alpha: .58, duration: 520, yoyo: true, repeat: -1 });
+    return this.add.container(x, y, [pulse, core, label, hint]).setDepth(12);
+  }
+
+  private pressRun() {
+    if (this.ended) return;
+    if (!this.started) {
+      this.started = true;
+      this.mainMusic.play();
+      this.status.setText("KEEP THE PACE — DON'T STOP RUNNING");
+    }
+    this.rescue = tapYellerRun(this.rescue);
+    this.tweens.add({ targets: this.runButton, scale: .86, duration: 55, yoyo: true });
+    this.cameras.main.shake(45, .0012);
+    this.updateRescueUI();
+  }
+
+  private updateRescueUI() {
+    const seconds = Math.ceil(this.rescue.time);
+    this.timerText.setText(`${Math.floor(seconds / 60).toString().padStart(2, "0")}:${(seconds % 60).toString().padStart(2, "0")}`);
+    this.distanceBar.width = 330 * this.rescue.distance / 100;
+    this.paceBar.width = 330 * this.rescue.pace / 100;
+    const meters = Math.max(0, Math.ceil(100 - this.rescue.distance));
+    this.distanceText.setText(meters > 0 ? `${meters} METERS TO OLD YELLER` : "REACH THE BOY!");
+    if (this.rescue.pace < 32 && this.rescue.elapsed > 2) {
+      this.status.setText("YOU'RE LOSING SPEED — PRESS RUN!");
+      this.paceBar.setFillStyle(0xc94b32);
+    } else if (this.rescue.elapsed > 2) {
+      this.status.setText("HOLD THIS PACE — THE VACCINE CAN SAVE HIM");
+      this.paceBar.setFillStyle(0x79b963);
+    }
+    if (this.rescue.time <= 10) {
+      this.timerText.setColor("#ff6654");
+      this.status.setText("TEN SECONDS — DON'T LET HIM FIRE!");
+    }
+  }
+
+  private finish(won: boolean) {
+    if (this.ended) return;
+    this.ended = true;
+    this.runButton.setAlpha(.35);
+    this.tweens.killTweensOf(this.runner);
+    if (won) {
+      localStorage.setItem(CHAPTER_FOUR_HEALED_KEY, "true");
+      this.mainMusic.stop();
+      this.status.setText("YOU MADE IT — GIVE HIM THE VACCINE!");
+      this.cameras.main.flash(220, 255, 225, 160, false);
+      this.tweens.add({ targets: this.runner, x: 1040, y: 485, duration: 650, ease: "Power2" });
+      this.time.delayedCall(900, () => this.showEnding(true));
+    } else {
+      this.status.setText("THE RIFLE FIRES");
+      const flash = this.add.star(1130, 478, 8, 9, 34, 0xffe7a0, 1).setDepth(25);
+      this.cameras.main.flash(160, 255, 244, 214, false);
+      this.cameras.main.shake(550, .024);
+      this.tweens.add({ targets: flash, scale: 2.2, alpha: 0, duration: 260, onComplete: () => flash.destroy() });
+      this.time.delayedCall(1100, () => { this.mainMusic.stop(); this.showEnding(false); });
+    }
+  }
+
+  private showEnding(won: boolean) {
+    const { width, height } = this.scale;
+    if (won) {
+      this.winningMusic.play();
+      this.add.image(width / 2, height / 2, "chapter4-victory").setDisplaySize(width, height).setDepth(30);
+      this.add.rectangle(width / 2, 78, width, 156, 0x1a1007, .65).setDepth(31);
+      this.add.rectangle(width / 2, height - 77, width, 154, 0x1a1007, .62).setDepth(31);
+    } else {
+      this.add.rectangle(width / 2, height / 2, width, height, 0x060504, .88).setDepth(30);
+      this.add.rectangle(width / 2, height / 2, 720, 330, 0x120b07, .96).setStrokeStyle(3, 0x9e6b39, .8).setDepth(31);
+    }
+    this.add.text(width / 2, won ? 29 : height / 2 - 96, won ? "OLD YELLER LIVES" : "THE SHOT ECHOES AGAIN", { fontFamily: "Arial Black", fontSize: won ? "46px" : "44px", color: won ? "#fff0c9" : "#d8b997", stroke: "#2b1103", strokeThickness: 8 }).setOrigin(.5, won ? 0 : .5).setDepth(32);
+    this.add.text(width / 2, won ? 89 : height / 2 - 28, won ? "The vaccine arrived. This time, the boy keeps his dog." : "You stopped running too soon. Get up and try again.", { fontFamily: "Georgia", fontSize: "23px", color: "#f3dfc0", stroke: "#1d0d04", strokeThickness: 5 }).setOrigin(.5).setDepth(32);
+    const buttonY = won ? height - 75 : height / 2 + 70;
+    const button = this.add.rectangle(width / 2, buttonY, 294, 66, 0x87501f, 1).setStrokeStyle(3, 0xffd58d, 1).setInteractive({ useHandCursor: true }).setDepth(32);
+    this.add.text(width / 2, buttonY, won ? "CONTINUE" : "TRY AGAIN", { fontFamily: "Arial Black", fontSize: "22px", color: "#fff2d9", stroke: "#2a1000", strokeThickness: 5 }).setOrigin(.5).setDepth(33);
+    button.on("pointerdown", () => won ? this.scene.start("menu") : this.scene.restart());
+    this.add.text(width / 2, won ? height - 27 : height / 2 + 126, "M: CHAPTER SELECT", { fontFamily: "Arial Black", fontSize: "12px", color: "#d9c2a1", stroke: "#000", strokeThickness: 3 }).setOrigin(.5).setDepth(32);
+  }
+
+  private makeWind() {
+    for (let i = 0; i < 28; i++) {
+      const seed = this.add.ellipse(Phaser.Math.Between(-100, 1280), Phaser.Math.Between(220, 650), Phaser.Math.Between(5, 12), 2, 0xe6c483, Phaser.Math.FloatBetween(.2, .55)).setDepth(4);
+      this.tweens.add({ targets: seed, x: 1380, y: seed.y - Phaser.Math.Between(10, 55), alpha: 0, duration: Phaser.Math.Between(1800, 3800), delay: Phaser.Math.Between(0, 2500), repeat: -1 });
+    }
+  }
+}
+
 class BonusHealing extends Phaser.Scene {
   private panel?: Phaser.GameObjects.Container;
   private step = 0;
@@ -1075,4 +1253,4 @@ class SwampRescue extends Phaser.Scene {
   }
 }
 
-new Phaser.Game({ type: Phaser.AUTO, parent: "game", width: 1280, height: 720, backgroundColor: "#07100f", scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH }, scene: [ChapterSelect, SwampRescue, ChapterTwoBattle, BonusHealing, ChapterThreeRescue] });
+new Phaser.Game({ type: Phaser.AUTO, parent: "game", width: 1280, height: 720, backgroundColor: "#07100f", scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH }, scene: [ChapterSelect, SwampRescue, ChapterTwoBattle, BonusHealing, ChapterThreeRescue, ChapterFourRescue] });
