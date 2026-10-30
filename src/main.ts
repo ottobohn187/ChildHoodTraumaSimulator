@@ -708,6 +708,7 @@ class ChapterFourRescue extends Phaser.Scene {
     this.load.image("chapter4-farm", "assets/chapter4-farm.png");
     this.load.image("chapter4-runner", "assets/chapter4-runner.png");
     this.load.image("chapter4-victory", "assets/chapter4-victory.png");
+    this.load.image("chapter4-failure-grave", "assets/chapter4-failure-grave.png");
     this.load.audio("chapter4-main-music", "assets/chapter4-main.mp3");
     this.load.audio("chapter4-winning-music", "assets/chapter4-winning.mp3");
     this.load.audio("chapter4-failure-music", "assets/chapter4-losing.mp3");
@@ -819,12 +820,15 @@ class ChapterFourRescue extends Phaser.Scene {
       this.time.delayedCall(900, () => this.showEnding(true));
     } else {
       this.status.setText("THE RIFLE FIRES");
+      this.mainMusic.stop();
       this.sound.play("chapter4-shotgun", { volume: .95 });
       const flash = this.add.star(1130, 478, 8, 9, 34, 0xffe7a0, 1).setDepth(25);
+      const blackout = this.add.rectangle(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, 0x000000, 1).setDepth(50).setAlpha(0);
       this.cameras.main.flash(160, 255, 244, 214, false);
       this.cameras.main.shake(550, .024);
       this.tweens.add({ targets: flash, scale: 2.2, alpha: 0, duration: 260, onComplete: () => flash.destroy() });
-      this.time.delayedCall(1100, () => { this.mainMusic.stop(); this.showEnding(false); });
+      this.time.delayedCall(180, () => blackout.setAlpha(1));
+      this.time.delayedCall(3400, () => { blackout.destroy(); this.showEnding(false); });
     }
   }
 
@@ -837,8 +841,9 @@ class ChapterFourRescue extends Phaser.Scene {
       this.add.rectangle(width / 2, height - 77, width, 154, 0x1a1007, .62).setDepth(31);
     } else {
       this.failureMusic.play({ seek: 20, loop: true });
-      this.add.rectangle(width / 2, height / 2, width, height, 0x060504, .88).setDepth(30);
-      this.add.rectangle(width / 2, height / 2, 720, 330, 0x120b07, .96).setStrokeStyle(3, 0x9e6b39, .8).setDepth(31);
+      this.add.image(width / 2, height / 2, "chapter4-failure-grave").setDisplaySize(width, height).setDepth(30);
+      this.add.rectangle(width / 2, 70, width, 140, 0x030507, .72).setDepth(31);
+      this.add.rectangle(width / 2, height - 122, width, 244, 0x030507, .67).setDepth(31);
     }
     this.add.text(width / 2, won ? 29 : height / 2 - 96, won ? "OLD YELLER LIVES" : "THE SHOT ECHOES AGAIN", { fontFamily: "Arial Black", fontSize: won ? "46px" : "44px", color: won ? "#fff0c9" : "#d8b997", stroke: "#2b1103", strokeThickness: 8 }).setOrigin(.5, won ? 0 : .5).setDepth(32);
     this.add.text(width / 2, won ? 89 : height / 2 - 28, won ? "The vaccine arrived. This time, the boy keeps his dog." : "You stopped running too soon. Get up and try again.", { fontFamily: "Georgia", fontSize: "23px", color: "#f3dfc0", stroke: "#1d0d04", strokeThickness: 5 }).setOrigin(.5).setDepth(32);
