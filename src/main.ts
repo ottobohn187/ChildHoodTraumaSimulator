@@ -2,6 +2,97 @@ import Phaser from "phaser";
 import "./style.css";
 import { canRescue, rescuePhase, stepTapRescue, tapPull, type RescueState } from "./game/rescuePhysics";
 
+type PlayerGender = "male" | "female";
+const PROFILE_KEY = "trauma-player-gender";
+
+class ChapterSelect extends Phaser.Scene {
+  private gender: PlayerGender | null = null;
+
+  constructor() { super("menu"); }
+
+  preload() {
+    this.load.image("swamp", "assets/swamp-background.png");
+    this.load.image("victory", "assets/childhood-healing-victory.png");
+    this.load.image("artax", "assets/artax-separated-v2.png");
+  }
+
+  create() {
+    const { width, height } = this.scale;
+    this.gender = localStorage.getItem(PROFILE_KEY) as PlayerGender | null;
+    this.add.image(width / 2, height / 2, "swamp").setDisplaySize(width, height).setAlpha(.34);
+    this.add.rectangle(width / 2, height / 2, width, height, 0x030606, .67);
+    this.add.rectangle(width / 2, 76, width, 152, 0x020303, .86);
+
+    this.add.text(42, 18, "CHILDHOOD", { fontFamily: "Arial Black", fontSize: "49px", color: "#e8e2d6", stroke: "#000", strokeThickness: 8 }).setScale(1.03, 1);
+    this.add.text(407, 18, "TRAUMA", { fontFamily: "Arial Black", fontSize: "49px", color: "#cf2923", stroke: "#250000", strokeThickness: 8 });
+    this.add.text(47, 78, "S I M U L A T O R", { fontFamily: "Arial Black", fontSize: "20px", color: "#d8d0c0", letterSpacing: 10 });
+    this.add.text(width - 42, 38, "RELIVE IT.  RESCUE THEM.  REWRITE IT.", { fontFamily: "Georgia", fontStyle: "italic", fontSize: "22px", color: "#d8c9ad" }).setOrigin(1, 0);
+    this.add.text(width - 42, 76, "CHOOSE A CHAPTER OF YOUR TRAUMA", { fontFamily: "Arial Black", fontSize: "14px", color: "#9eaaa4" }).setOrigin(1, 0);
+
+    this.makeChapterCard(36, 174, 748, 390);
+    this.makeLockedCard(808, 174, 436, 390);
+    this.makeChapterRail();
+
+    const profile = this.add.text(width - 38, height - 24, this.gender ? `PROFILE: ${this.gender.toUpperCase()}  •  CHANGE` : "CHOOSE YOUR PROFILE", {
+      fontFamily: "Arial Black", fontSize: "12px", color: "#d7c9aa",
+    }).setOrigin(1, .5).setInteractive({ useHandCursor: true });
+    profile.on("pointerdown", () => this.showGenderPrompt());
+    if (!this.gender) this.showGenderPrompt();
+  }
+
+  private makeChapterCard(x: number, y: number, w: number, h: number) {
+    const card = this.add.rectangle(x, y, w, h, 0x101817, .96).setOrigin(0).setStrokeStyle(3, 0xd0b16a, .9).setInteractive({ useHandCursor: true });
+    const art = this.add.image(x + w * .62, y + h * .57, "artax").setDisplaySize(520, 292).setAlpha(.9);
+    art.setMask(this.add.graphics().fillRect(x + 2, y + 2, w - 4, h - 4).createGeometryMask());
+    this.add.rectangle(x + w / 2, y + 58, w - 4, 116, 0x020403, .74);
+    this.add.text(x + 24, y + 18, "CHAPTER 1", { fontFamily: "Arial Black", fontSize: "20px", color: "#dbcaa4" });
+    this.add.text(x + 24, y + 48, "SAVE ARTAX", { fontFamily: "Arial Black", fontSize: "39px", color: "#fff8e7", stroke: "#000", strokeThickness: 6 });
+    this.add.text(x + 26, y + 100, "THE SWAMP OF DARKNESS", { fontFamily: "Georgia", fontSize: "18px", color: "#c9d0ca" });
+    this.add.text(x + 26, y + h - 53, "CLICK TO ENTER THE MEMORY", { fontFamily: "Arial Black", fontSize: "16px", color: "#f2d993", stroke: "#000", strokeThickness: 4 });
+    card.on("pointerover", () => card.setStrokeStyle(5, 0xffdf8b, 1));
+    card.on("pointerout", () => card.setStrokeStyle(3, 0xd0b16a, .9));
+    card.on("pointerdown", () => this.gender ? this.scene.start("swamp") : this.showGenderPrompt());
+  }
+
+  private makeLockedCard(x: number, y: number, w: number, h: number) {
+    this.add.image(x + w / 2, y + h / 2, "victory").setDisplaySize(w, h).setAlpha(.18);
+    this.add.rectangle(x, y, w, h, 0x050606, .72).setOrigin(0).setStrokeStyle(2, 0x606663, .7);
+    this.add.text(x + 24, y + 20, "CHAPTER 2", { fontFamily: "Arial Black", fontSize: "20px", color: "#777e79" });
+    this.add.text(x + 24, y + 54, "LOCKED MEMORY", { fontFamily: "Arial Black", fontSize: "31px", color: "#929894", stroke: "#000", strokeThickness: 5 });
+    this.add.text(x + w / 2, y + h / 2 + 12, "🔒", { fontSize: "68px" }).setOrigin(.5);
+    this.add.text(x + w / 2, y + h - 48, "HEAL CHAPTER 1 TO CONTINUE", { fontFamily: "Arial Black", fontSize: "14px", color: "#777e79" }).setOrigin(.5);
+  }
+
+  private makeChapterRail() {
+    const labels = ["1. ARTAX", "2. LOCKED", "3. LOCKED", "4. LOCKED", "5. LOCKED", "6. LOCKED"];
+    labels.forEach((label, i) => {
+      const x = 36 + i * 202;
+      this.add.rectangle(x, 584, 184, 91, i === 0 ? 0x24312e : 0x0b0e0d, .96).setOrigin(0).setStrokeStyle(i === 0 ? 4 : 2, i === 0 ? 0xc92c26 : 0x474c49, 1);
+      this.add.text(x + 92, 644, label, { fontFamily: "Arial Black", fontSize: "13px", color: i === 0 ? "#f0e7d4" : "#676c69" }).setOrigin(.5);
+      if (i > 0) this.add.text(x + 92, 614, "🔒", { fontSize: "22px" }).setOrigin(.5);
+    });
+  }
+
+  private showGenderPrompt() {
+    const { width, height } = this.scale;
+    const overlay = this.add.container(0, 0).setDepth(50);
+    const block = this.add.rectangle(width / 2, height / 2, width, height, 0x010202, .86).setInteractive();
+    const panel = this.add.rectangle(width / 2, height / 2, 570, 330, 0x111816, .99).setStrokeStyle(3, 0xd5c18f, .95);
+    const title = this.add.text(width / 2, height / 2 - 117, "WHO IS REENTERING THE MEMORY?", { fontFamily: "Arial Black", fontSize: "24px", color: "#fff2d0" }).setOrigin(.5);
+    const copy = this.add.text(width / 2, height / 2 - 66, "This tailors the healing affirmation at the end.", { fontFamily: "Georgia", fontSize: "18px", color: "#c8d0cb" }).setOrigin(.5);
+    const makeChoice = (x: number, label: string, value: PlayerGender) => {
+      const button = this.add.rectangle(x, height / 2 + 31, 210, 82, 0x6d2a24, 1).setStrokeStyle(3, 0xe8d29c, 1).setInteractive({ useHandCursor: true });
+      const text = this.add.text(x, height / 2 + 31, label, { fontFamily: "Arial Black", fontSize: "22px", color: "#fff2d6" }).setOrigin(.5);
+      button.on("pointerdown", () => { localStorage.setItem(PROFILE_KEY, value); this.gender = value; overlay.destroy(true); this.scene.restart(); });
+      return [button, text];
+    };
+    const male = makeChoice(width / 2 - 120, "MALE", "male");
+    const female = makeChoice(width / 2 + 120, "FEMALE", "female");
+    const note = this.add.text(width / 2, height / 2 + 111, "Saved only on this device. You can change it anytime.", { fontFamily: "Georgia", fontSize: "14px", color: "#87918c" }).setOrigin(.5);
+    overlay.add([block, panel, title, copy, ...male, ...female, note]);
+  }
+}
+
 class SwampRescue extends Phaser.Scene {
   private state: RescueState = { depth: 65, stamina: 100, time: 105 };
   private started = false;
@@ -22,6 +113,8 @@ class SwampRescue extends Phaser.Scene {
   private audioPosition = 15;
   private horsePullKick = 0;
   private rescuerPullKick = 0;
+
+  constructor() { super("swamp"); }
 
   preload() {
     this.load.image("swamp", "assets/swamp-background.png");
@@ -63,6 +156,7 @@ class SwampRescue extends Phaser.Scene {
     this.pullButton = this.makePullButton(width / 2, height - 82);
     const pullKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
     pullKey.on("down", () => this.pull());
+    this.input.keyboard!.on("keydown-M", () => { this.sound.stopAll(); this.scene.start("menu"); });
     this.music = this.sound.add("chapter-music");
     this.victoryMusic = this.sound.add("victory-theme");
   }
@@ -208,11 +302,16 @@ class SwampRescue extends Phaser.Scene {
       const message = this.add.text(width / 2, 105, "ARTAX IS FREE  •  YOU CHANGED THE ENDING", {
         fontFamily: "Georgia", fontSize: "23px", color: "#f7ead3", stroke: "#1a0e08", strokeThickness: 5,
       }).setOrigin(.5, 0).setAlpha(0).setDepth(33);
-      const replay = this.add.text(width / 2, height - 42, "PRESS R TO RETURN TO THE SWAMP", {
+      const gender = localStorage.getItem(PROFILE_KEY) as PlayerGender | null;
+      const pronoun = gender === "female" ? "HER" : "HIM";
+      const affirmation = this.add.text(width / 2, 143, `THE CHILD INSIDE ${pronoun} IS SAFE NOW`, {
+        fontFamily: "Arial Black", fontSize: "16px", color: "#edcf88", stroke: "#1a0e08", strokeThickness: 4, letterSpacing: 2,
+      }).setOrigin(.5, 0).setAlpha(0).setDepth(33);
+      const replay = this.add.text(width / 2, height - 42, "R: REPLAY CHAPTER   •   M: CHAPTER SELECT", {
         fontFamily: "Arial Black", fontSize: "16px", color: "#f5e7c6", stroke: "#000", strokeThickness: 5,
       }).setOrigin(.5).setAlpha(0).setDepth(33);
       this.tweens.add({ targets: [victory, shade, glow], alpha: 1, duration: 1100, ease: "Sine.out" });
-      this.tweens.add({ targets: [healing, message, replay], alpha: 1, y: "-=8", duration: 900, delay: 650, ease: "Quad.out" });
+      this.tweens.add({ targets: [healing, message, affirmation, replay], alpha: 1, y: "-=8", duration: 900, delay: 650, ease: "Quad.out" });
       return;
     }
     this.tweens.add({ targets: this.horse, x: won ? this.horse.x + 150 : this.horse.x - 30, y: won ? this.horse.y - 145 : this.horse.y + 260, alpha: won ? 1 : .12, duration: won ? 1400 : 2300, ease: won ? "Back.out" : "Sine.in" });
@@ -226,4 +325,4 @@ class SwampRescue extends Phaser.Scene {
   }
 }
 
-new Phaser.Game({ type: Phaser.AUTO, parent: "game", width: 1280, height: 720, backgroundColor: "#07100f", scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH }, scene: SwampRescue });
+new Phaser.Game({ type: Phaser.AUTO, parent: "game", width: 1280, height: 720, backgroundColor: "#07100f", scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH }, scene: [ChapterSelect, SwampRescue] });
