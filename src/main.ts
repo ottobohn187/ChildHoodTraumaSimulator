@@ -124,6 +124,16 @@ class SwampRescue extends Phaser.Scene {
 
   constructor() { super("swamp"); }
 
+  init() {
+    this.state = { depth: 65, stamina: 100, time: 105 };
+    this.started = false;
+    this.ended = false;
+    this.effort = 0;
+    this.audioPosition = 15;
+    this.horsePullKick = 0;
+    this.rescuerPullKick = 0;
+  }
+
   preload() {
     this.load.image("swamp", "assets/swamp-background.png");
     this.load.image("artax", "assets/artax-separated-v2.png");
