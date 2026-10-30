@@ -484,6 +484,8 @@ class ChapterThreeRescue extends Phaser.Scene {
   private ended = false;
   private runner!: Phaser.GameObjects.Image;
   private toon!: Phaser.GameObjects.Image;
+  private judge!: Phaser.GameObjects.Image;
+  private judgeArm!: Phaser.GameObjects.Graphics;
   private distanceBar!: Phaser.GameObjects.Rectangle;
   private dangerBar!: Phaser.GameObjects.Rectangle;
   private timerText!: Phaser.GameObjects.Text;
@@ -505,8 +507,9 @@ class ChapterThreeRescue extends Phaser.Scene {
   preload() {
     this.load.image("chapter3-factory", "assets/chapter3-dip-factory.png");
     this.load.image("chapter3-runner", "assets/chapter3-runner.png");
-    this.load.image("chapter3-toon", "assets/chapter3-toon-cage.png");
-    this.load.image("chapter3-victory", "assets/chapter3-victory.png");
+    this.load.image("chapter3-toon", "assets/chapter3-shoe-hand.png");
+    this.load.image("chapter3-judge", "assets/chapter3-judge.png");
+    this.load.image("chapter3-victory", "assets/chapter3-victory-shoe.png");
     this.load.audio("chapter3-music", "assets/chapter3-dip-music.mp3");
     this.load.audio("chapter3-failed-music", "assets/chapter3-failed.mp3");
     this.load.audio("chapter3-winning-music", "assets/chapter3-winning.mp3");
@@ -519,12 +522,15 @@ class ChapterThreeRescue extends Phaser.Scene {
     this.makeDipMist();
 
     this.runner = this.add.image(92, 507, "chapter3-runner").setDisplaySize(268, 179).setDepth(8);
-    this.toon = this.add.image(1070, 242, "chapter3-toon").setDisplaySize(170, 255).setDepth(7);
+    this.judge = this.add.image(1152, 327, "chapter3-judge").setDisplaySize(292, 438).setDepth(5);
+    this.judgeArm = this.add.graphics().setDepth(6);
+    this.toon = this.add.image(1062, 270, "chapter3-toon").setDisplaySize(132, 198).setDepth(7);
+    this.drawJudgeArm();
 
     this.add.rectangle(width / 2, 66, width, 132, 0x020806, .86).setDepth(10);
     this.add.text(28, 14, "CHAPTER 3", { fontFamily: "Arial Black", fontSize: "17px", color: "#8bdc82", stroke: "#000", strokeThickness: 4 }).setDepth(11);
     this.add.text(28, 39, "SAVE THE TOON FROM THE DIP", { fontFamily: "Arial Black", fontSize: "31px", color: "#efffd9", stroke: "#001b08", strokeThickness: 7 }).setDepth(11);
-    this.add.text(30, 86, "Hit RUN fast enough to cross the factory before the cage reaches the vat.", { fontFamily: "Georgia", fontSize: "16px", color: "#d2e4cc" }).setDepth(11);
+    this.add.text(30, 86, "Hit RUN fast enough to stop the judge from lowering the toon into the vat.", { fontFamily: "Georgia", fontSize: "16px", color: "#d2e4cc" }).setDepth(11);
     this.timerText = this.add.text(width - 28, 19, "00:22", { fontFamily: "Arial Black", fontSize: "34px", color: "#b9ff9c", stroke: "#001c08", strokeThickness: 7 }).setOrigin(1, 0).setDepth(11);
     this.add.text(width - 28, 66, "40 PRESSES TO REWRITE IT", { fontFamily: "Arial Black", fontSize: "12px", color: "#88b987" }).setOrigin(1, 0).setDepth(11);
 
@@ -550,6 +556,7 @@ class ChapterThreeRescue extends Phaser.Scene {
   update(time: number, delta: number) {
     if (this.ended) return;
     this.toon.setAngle(Math.sin(time / 430) * 1.7);
+    this.drawJudgeArm();
     if (!this.started) return;
     this.rescue = stepDipRescue(this.rescue, delta / 1000);
     this.updateRescueUI();
@@ -594,12 +601,13 @@ class ChapterThreeRescue extends Phaser.Scene {
     this.timerText.setText(`00:${Math.ceil(this.rescue.time).toString().padStart(2, "0")}`);
     this.distanceBar.width = 330 * this.rescue.distance / 100;
     this.dangerBar.width = 330 * this.rescue.danger / 100;
-    this.toon.setY(242 + this.rescue.danger * 2.05);
+    this.toon.setY(270 + this.rescue.danger * 1.95);
+    this.drawJudgeArm();
     const meters = Math.max(0, Math.ceil(100 - this.rescue.distance));
-    this.distanceText.setText(meters > 0 ? `${meters} METERS AWAY` : "REACH THE CAGE!");
+    this.distanceText.setText(meters > 0 ? `${meters} METERS AWAY` : "REACH THE SHOE!");
     if (this.rescue.time <= 7 && !this.ended) {
       this.timerText.setColor("#ff675c");
-      this.status.setText("THE DIP IS RIGHT BELOW HIM — RUN!");
+      this.status.setText("THE DIP IS RIGHT BELOW THE SHOE — RUN!");
     }
   }
 
@@ -611,12 +619,14 @@ class ChapterThreeRescue extends Phaser.Scene {
     this.tweens.killTweensOf([this.runner, this.toon]);
     if (won) {
       localStorage.setItem(CHAPTER_THREE_HEALED_KEY, "true");
-      this.status.setText("YOU REACHED HIM — PULL HIM CLEAR!");
+      this.status.setText("YOU REACHED IT — GRAB THE SHOE!");
       this.cameras.main.flash(180, 220, 255, 190, false);
       this.tweens.add({ targets: this.runner, x: 960, y: 490, duration: 500, ease: "Power2" });
-      this.tweens.add({ targets: this.toon, y: 185, x: 1010, angle: 0, duration: 700, ease: "Back.out" });
+      this.tweens.add({ targets: this.toon, y: 185, x: 995, angle: 0, duration: 700, ease: "Back.out" });
+      this.tweens.add({ targets: this.judge, x: 1325, alpha: .22, duration: 760, ease: "Quad.in" });
+      this.tweens.add({ targets: this.judgeArm, alpha: 0, duration: 650 });
     } else {
-      this.status.setText("THE CAGE REACHED THE DIP");
+      this.status.setText("THE SHOE REACHED THE DIP");
       this.cameras.main.flash(320, 70, 255, 45, false);
       this.cameras.main.shake(600, .018);
       this.tweens.add({ targets: this.toon, y: 550, alpha: .08, duration: 700, ease: "Quad.in" });
@@ -649,6 +659,17 @@ class ChapterThreeRescue extends Phaser.Scene {
       const mist = this.add.circle(Phaser.Math.Between(930, 1260), Phaser.Math.Between(260, 560), Phaser.Math.Between(2, 7), 0x62ff3e, Phaser.Math.FloatBetween(.12, .42)).setDepth(4);
       this.tweens.add({ targets: mist, y: mist.y - Phaser.Math.Between(80, 180), x: mist.x + Phaser.Math.Between(-35, 35), alpha: 0, duration: Phaser.Math.Between(1200, 2600), delay: Phaser.Math.Between(0, 1800), repeat: -1 });
     }
+  }
+
+  private drawJudgeArm() {
+    if (!this.judgeArm || !this.toon) return;
+    this.judgeArm.clear();
+    const shoulderX = 1110;
+    const shoulderY = 300;
+    const handX = this.toon.x;
+    const handY = this.toon.y - 77;
+    this.judgeArm.lineStyle(46, 0x050706, 1).beginPath().moveTo(shoulderX, shoulderY).lineTo(handX, handY).strokePath();
+    this.judgeArm.lineStyle(5, 0x315c2d, .72).beginPath().moveTo(shoulderX - 10, shoulderY + 5).lineTo(handX - 6, handY + 5).strokePath();
   }
 }
 
