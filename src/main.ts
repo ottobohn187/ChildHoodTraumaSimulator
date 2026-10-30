@@ -472,6 +472,8 @@ class BonusHealing extends Phaser.Scene {
   private music?: Phaser.Sound.BaseSound;
   private voice?: Phaser.Sound.BaseSound;
   private advanceTimer?: Phaser.Time.TimerEvent;
+  private voiceTimer?: Phaser.Time.TimerEvent;
+  private artTimer?: Phaser.Time.TimerEvent;
 
   constructor() { super("bonus"); }
 
@@ -483,7 +485,7 @@ class BonusHealing extends Phaser.Scene {
     this.load.image("bonus-porch-girl", "assets/bonus-porch-girl.png");
     this.load.image("bonus-safe-boy", "assets/bonus-safe-boy.png");
     this.load.image("bonus-safe-girl", "assets/bonus-safe-girl.png");
-    this.load.image("bonus-goofy-time", "assets/bonus-goofy-time.png");
+    this.load.image("bonus-doorway-belt", "assets/bonus-doorway-belt.png");
     this.load.image("bonus-game-boy", "assets/bonus-game-boy.png");
     this.load.image("bonus-game-girl", "assets/bonus-game-girl.png");
     this.load.image("bonus-flashlight", "assets/bonus-flashlight.png");
@@ -508,12 +510,16 @@ class BonusHealing extends Phaser.Scene {
     this.showStep();
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.advanceTimer?.remove(false);
+      this.voiceTimer?.remove(false);
+      this.artTimer?.remove(false);
       this.sound.stopAll();
     });
   }
 
   private showStep() {
     this.advanceTimer?.remove(false);
+    this.voiceTimer?.remove(false);
+    this.artTimer?.remove(false);
     this.voice?.stop();
     this.voice?.destroy();
     this.panel?.destroy(true);
@@ -523,7 +529,7 @@ class BonusHealing extends Phaser.Scene {
       { image: isGirl ? "bonus-hug-girl" : "bonus-hug-boy", audio: "bonus-love", title: "BONUS HEALING  •  HE STAYED", quote: "“You know... I love you. You're enough. I'm here.”" },
       { image: "bonus-milk", audio: "bonus-milk-voice", title: "BONUS HEALING  •  HE CAME BACK", quote: "“I brought back milk. Tomorrow, breakfast is on me! Cereal, everyone!”" },
       { image: isGirl ? "bonus-porch-girl" : "bonus-porch-boy", audio: "bonus-grass", title: "BONUS HEALING  •  HOME WAS ENOUGH", quote: "“Well... the grass wasn't greener on the other side.”" },
-      { image: "bonus-goofy-time", audio: "bonus-safe-voice", title: "BONUS HEALING  •  DARK HUMOR UNLOCKED", quote: "“I won't hit you again. I was wrong. And I love you.”", contain: true },
+      { image: isGirl ? "bonus-safe-girl" : "bonus-safe-boy", introImage: "bonus-doorway-belt", voiceDelay: 3900, audio: "bonus-safe-voice", title: "BONUS HEALING  •  HE CHOSE DIFFERENTLY", quote: "“I won't hit you again. I was wrong. And I love you.”" },
       { image: isGirl ? "bonus-game-girl" : "bonus-game-boy", audio: "bonus-game-voice", title: "BONUS HEALING  •  HE SHOWED UP", quote: "“I came to your game! I love you! Good catch! Good swing!”" },
       { image: "bonus-flashlight", audio: "bonus-flashlight-voice", title: "BONUS HEALING  •  THE FLASHLIGHT", quote: "“Perfect. Thanks, buddy. I love you.”" },
       { image: "bonus-birthday", audio: "bonus-birthday-voice", title: "BONUS HEALING  •  THE BIRTHDAY CALL", quote: "“I called just to tell you happy birthday.”" },
@@ -531,13 +537,9 @@ class BonusHealing extends Phaser.Scene {
     ];
     const scene = scenes[this.step];
     const backdrop = this.add.rectangle(width / 2, height / 2, width, height, 0x030303, 1);
-    const bg = this.add.image(width / 2, height / 2, scene.image).setAlpha(0);
-    if (scene.contain) {
-      bg.setScale(Math.min(width / bg.width, height / bg.height));
-    } else {
-      bg.setDisplaySize(width, height);
-    }
-    const top = this.add.rectangle(width / 2, 66, width, 132, 0x090806, scene.contain ? .28 : .72);
+    const bg = this.add.image(width / 2, height / 2, scene.image).setDisplaySize(width, height).setAlpha(0);
+    const intro = scene.introImage ? this.add.image(width / 2, height / 2, scene.introImage).setDisplaySize(width, height).setAlpha(0) : undefined;
+    const top = this.add.rectangle(width / 2, 66, width, 132, 0x090806, .72);
     const bottom = this.add.rectangle(width / 2, height - 101, width, 202, 0x090806, .74);
     const kicker = this.add.text(30, 18, scene.title, { fontFamily: "Arial Black", fontSize: "25px", color: "#fff0cb", stroke: "#000", strokeThickness: 6 });
     const count = this.add.text(width - 28, 22, `${this.step + 1} / ${scenes.length}`, { fontFamily: "Arial Black", fontSize: "17px", color: "#d8c49b" }).setOrigin(1, 0);
@@ -550,8 +552,19 @@ class BonusHealing extends Phaser.Scene {
       button.setVisible(false);
       buttonText.setVisible(false);
     }
-    this.panel = this.add.container(0, 0, [backdrop, bg, top, bottom, kicker, count, countdown, quote, button, buttonText]);
-    this.tweens.add({ targets: bg, alpha: 1, duration: 850, ease: "Sine.easeOut" });
+    const panelObjects: Phaser.GameObjects.GameObject[] = [backdrop, bg];
+    if (intro) panelObjects.push(intro);
+    panelObjects.push(top, bottom, kicker, count, countdown, quote, button, buttonText);
+    this.panel = this.add.container(0, 0, panelObjects);
+    if (intro) {
+      this.tweens.add({ targets: intro, alpha: 1, duration: 650, ease: "Sine.easeOut" });
+      this.artTimer = this.time.delayedCall(3200, () => {
+        this.tweens.add({ targets: intro, alpha: 0, duration: 900, ease: "Sine.easeInOut" });
+        this.tweens.add({ targets: bg, alpha: 1, duration: 900, ease: "Sine.easeInOut" });
+      });
+    } else {
+      this.tweens.add({ targets: bg, alpha: 1, duration: 850, ease: "Sine.easeOut" });
+    }
     let remaining = 10;
     const next = () => {
       if (this.step >= scenes.length - 1) return;
@@ -583,8 +596,15 @@ class BonusHealing extends Phaser.Scene {
       },
     });
     countdown.setText(final ? "CONTINUE UNLOCKS IN 10" : "NEXT MEMORY IN 10");
-    this.voice = this.sound.add(scene.audio, { volume: .95, rate: .88 });
-    this.voice.play();
+    const playVoice = () => {
+      this.voice = this.sound.add(scene.audio, { volume: .95, rate: .88 });
+      this.voice.play();
+    };
+    if (scene.voiceDelay) {
+      this.voiceTimer = this.time.delayedCall(scene.voiceDelay, playVoice);
+    } else {
+      playVoice();
+    }
   }
 }
 
