@@ -153,6 +153,7 @@ class ChapterTwoBattle extends Phaser.Scene {
     this.load.audio("chapter2-fight-music", "assets/chapter2-fight-cover.mp3");
     this.load.audio("chapter2-winning-music", "assets/chapter2-winning-cover.mp3");
     this.load.audio("chapter2-failure-music", "assets/chapter2-failure-cover.mp3");
+    this.load.spritesheet("blood-squirt-right", "assets/blood-squirt-right.png", { frameWidth: 512, frameHeight: 512 });
   }
 
   create() {
@@ -183,6 +184,9 @@ class ChapterTwoBattle extends Phaser.Scene {
     this.fightMusic = this.sound.add("chapter2-fight-music");
     this.winningMusic = this.sound.add("chapter2-winning-music");
     this.failureMusic = this.sound.add("chapter2-failure-music");
+    if (!this.anims.exists("blood-squirt-right-animation")) {
+      this.anims.create({ key: "blood-squirt-right-animation", frames: this.anims.generateFrameNumbers("blood-squirt-right", { start: 0, end: 15 }), frameRate: 26, repeat: 0 });
+    }
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.sound.stopAll());
   }
 
@@ -331,6 +335,9 @@ class ChapterTwoBattle extends Phaser.Scene {
   }
 
   private sprayBlood(x: number, y: number) {
+    const squirt = this.add.sprite(x - 8, y - 4, "blood-squirt-right", 0).setOrigin(.17, .5).setScale(.58).setDepth(17).setAngle(-7);
+    squirt.play("blood-squirt-right-animation");
+    squirt.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => squirt.destroy());
     for (let i = 0; i < 34; i++) {
       const size = Phaser.Math.Between(3, 11);
       const drop = this.add.ellipse(x, y, size, size * Phaser.Math.FloatBetween(.45, 1.7), i % 5 === 0 ? 0x6b0505 : 0xc41414, Phaser.Math.FloatBetween(.72, 1)).setDepth(15).setRotation(Phaser.Math.FloatBetween(0, 3));

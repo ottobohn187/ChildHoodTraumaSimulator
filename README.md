@@ -21,3 +21,7 @@ pnpm build
 ```
 
 Live demo: https://trauma.ottobohn.com/
+
+## Asset credits
+
+- “Pixelated Blood Animations” by Sinestesia, used under [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/). The right-facing 16-frame blood sprite sheet is used for the Chapter 2 bite effect. [Original asset](https://opengameart.org/content/pixelated-blood-animations).
