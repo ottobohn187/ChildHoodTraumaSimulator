@@ -483,6 +483,7 @@ class BonusHealing extends Phaser.Scene {
     this.load.image("bonus-porch-girl", "assets/bonus-porch-girl.png");
     this.load.image("bonus-safe-boy", "assets/bonus-safe-boy.png");
     this.load.image("bonus-safe-girl", "assets/bonus-safe-girl.png");
+    this.load.image("bonus-goofy-time", "assets/bonus-goofy-time.png");
     this.load.image("bonus-game-boy", "assets/bonus-game-boy.png");
     this.load.image("bonus-game-girl", "assets/bonus-game-girl.png");
     this.load.image("bonus-flashlight", "assets/bonus-flashlight.png");
@@ -522,15 +523,21 @@ class BonusHealing extends Phaser.Scene {
       { image: isGirl ? "bonus-hug-girl" : "bonus-hug-boy", audio: "bonus-love", title: "BONUS HEALING  •  HE STAYED", quote: "“You know... I love you. You're enough. I'm here.”" },
       { image: "bonus-milk", audio: "bonus-milk-voice", title: "BONUS HEALING  •  HE CAME BACK", quote: "“I brought back milk. Tomorrow, breakfast is on me! Cereal, everyone!”" },
       { image: isGirl ? "bonus-porch-girl" : "bonus-porch-boy", audio: "bonus-grass", title: "BONUS HEALING  •  HOME WAS ENOUGH", quote: "“Well... the grass wasn't greener on the other side.”" },
-      { image: isGirl ? "bonus-safe-girl" : "bonus-safe-boy", audio: "bonus-safe-voice", title: "BONUS HEALING  •  THE CYCLE ENDED", quote: "“I won't hit you again. I was wrong. And I love you.”" },
+      { image: "bonus-goofy-time", audio: "bonus-safe-voice", title: "BONUS HEALING  •  DARK HUMOR UNLOCKED", quote: "“I won't hit you again. I was wrong. And I love you.”", contain: true },
       { image: isGirl ? "bonus-game-girl" : "bonus-game-boy", audio: "bonus-game-voice", title: "BONUS HEALING  •  HE SHOWED UP", quote: "“I came to your game! I love you! Good catch! Good swing!”" },
       { image: "bonus-flashlight", audio: "bonus-flashlight-voice", title: "BONUS HEALING  •  THE FLASHLIGHT", quote: "“Perfect. Thanks, buddy. I love you.”" },
       { image: "bonus-birthday", audio: "bonus-birthday-voice", title: "BONUS HEALING  •  THE BIRTHDAY CALL", quote: "“I called just to tell you happy birthday.”" },
       { image: "bonus-apology", audio: "bonus-apology-voice", title: "BONUS HEALING  •  HE TOOK RESPONSIBILITY", quote: "“I was wrong, and it wasn't your fault. Sometimes, I don't know how to handle my feelings. I hope you forgive me.”" },
     ];
     const scene = scenes[this.step];
-    const bg = this.add.image(width / 2, height / 2, scene.image).setDisplaySize(width, height).setAlpha(0);
-    const top = this.add.rectangle(width / 2, 66, width, 132, 0x090806, .72);
+    const backdrop = this.add.rectangle(width / 2, height / 2, width, height, 0x030303, 1);
+    const bg = this.add.image(width / 2, height / 2, scene.image).setAlpha(0);
+    if (scene.contain) {
+      bg.setScale(Math.min(width / bg.width, height / bg.height));
+    } else {
+      bg.setDisplaySize(width, height);
+    }
+    const top = this.add.rectangle(width / 2, 66, width, 132, 0x090806, scene.contain ? .28 : .72);
     const bottom = this.add.rectangle(width / 2, height - 101, width, 202, 0x090806, .74);
     const kicker = this.add.text(30, 18, scene.title, { fontFamily: "Arial Black", fontSize: "25px", color: "#fff0cb", stroke: "#000", strokeThickness: 6 });
     const count = this.add.text(width - 28, 22, `${this.step + 1} / ${scenes.length}`, { fontFamily: "Arial Black", fontSize: "17px", color: "#d8c49b" }).setOrigin(1, 0);
@@ -543,7 +550,7 @@ class BonusHealing extends Phaser.Scene {
       button.setVisible(false);
       buttonText.setVisible(false);
     }
-    this.panel = this.add.container(0, 0, [bg, top, bottom, kicker, count, countdown, quote, button, buttonText]);
+    this.panel = this.add.container(0, 0, [backdrop, bg, top, bottom, kicker, count, countdown, quote, button, buttonText]);
     this.tweens.add({ targets: bg, alpha: 1, duration: 850, ease: "Sine.easeOut" });
     let remaining = 10;
     const next = () => {
