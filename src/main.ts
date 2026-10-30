@@ -864,26 +864,26 @@ class ChapterFourRescue extends Phaser.Scene {
 }
 
 const CHAPTER_FOUR_HEALING_MOMENTS = [
-  ["THE DEBT COLLECTOR", "Remember that $200 I borrowed in 2001? Here's $300 with interest.", "💵"],
-  ["THE FOOD SHARER", "Someone opens a bag of fries and immediately offers you some. The GOOD fries at the bottom.", "🍟"],
-  ["THE EX-GIRLFRIEND", "Honestly, you were the best I ever had. I messed up.", "☎"],
-  ["THE GROUP PROJECT", "Every team member does their share of the work. Nobody needs reminding.", "✓"],
-  ["THE LAST SLICE", "Everyone at the pizza party insists you take the last slice.", "🍕"],
-  ["THE MECHANIC", "Actually, it was just a loose wire. No charge.", "🔧"],
-  ["THE JOB INTERVIEW", "We reviewed your qualifications. You're overqualified, so we're offering you more money.", "💼"],
-  ["THE PARENT APOLOGY", "Mom says, ‘You were right. I should have listened.’ No excuses.", "♥"],
-  ["THE SCHOOL BULLY", "I was insecure. You didn't deserve that.", "🤝"],
-  ["THE RESTAURANT BILL", "Someone already paid for your meal. No strings attached.", "🍽"],
-  ["THE TEXT MESSAGE", "Someone actually texts you first and asks how you're doing.", "✉"],
-  ["THE PARTY INVITATION", "Friends invite you somewhere, and they genuinely want you there.", "🎉"],
-  ["THE BOSS", "You work too hard. Take Friday off. Paid.", "☀"],
-  ["THE BORROWED TOOL", "Your neighbor returns your socket set, cleaned, with every socket present.", "🧰"],
-  ["THE ARGUMENT", "You know what? You were right. I'm sorry. No follow-up argument.", "🕊"],
-  ["THE COMPLIMENT", "A stranger compliments your shirt, and they're not trying to sell you anything.", "★"],
-  ["THE MOVING DAY", "Six friends show up with trucks. Nobody suddenly has a back injury.", "🚚"],
-  ["THE REFUND", "Customer service says, ‘You're absolutely right. Here's your money back.’", "↩"],
-  ["THE BEST FRIEND", "Your friend defends you when you're not in the room.", "🛡"],
-  ["THE REUNION", "Your high school crush admits, ‘I actually had a huge crush on you back then.’", "♥"],
+  ["THE DEBT COLLECTOR", "Remember that $200 I borrowed in 2001? Here's $300 with interest.", "chapter4-bonus-debt"],
+  ["THE FOOD SHARER", "Someone opens a bag of fries and immediately offers you some. The GOOD fries at the bottom.", "chapter4-bonus-fries"],
+  ["THE EX-GIRLFRIEND", "Honestly, you were the best I ever had. I messed up.", "chapter4-bonus-ex"],
+  ["THE GROUP PROJECT", "Every team member does their share of the work. Nobody needs reminding.", "chapter4-bonus-group-project"],
+  ["THE LAST SLICE", "Everyone at the pizza party insists you take the last slice.", "chapter4-bonus-last-slice"],
+  ["THE MECHANIC", "Actually, it was just a loose wire. No charge.", "chapter4-bonus-mechanic"],
+  ["THE JOB INTERVIEW", "We reviewed your qualifications. You're overqualified, so we're offering you more money.", "chapter4-bonus-interview"],
+  ["THE PARENT APOLOGY", "Mom says, ‘You were right. I should have listened.’ No excuses.", "chapter4-bonus-parent-apology"],
+  ["THE SCHOOL BULLY", "I was insecure. You didn't deserve that.", "chapter4-bonus-bully"],
+  ["THE RESTAURANT BILL", "Someone already paid for your meal. No strings attached.", "chapter4-bonus-restaurant"],
+  ["THE TEXT MESSAGE", "Someone actually texts you first and asks how you're doing.", "chapter4-bonus-text"],
+  ["THE PARTY INVITATION", "Friends invite you somewhere, and they genuinely want you there.", "chapter4-bonus-party"],
+  ["THE BOSS", "You work too hard. Take Friday off. Paid.", "chapter4-bonus-boss"],
+  ["THE BORROWED TOOL", "Your neighbor returns your socket set, cleaned, with every socket present.", "chapter4-bonus-tool"],
+  ["THE ARGUMENT", "You know what? You were right. I'm sorry. No follow-up argument.", "chapter4-bonus-argument"],
+  ["THE COMPLIMENT", "A stranger compliments your shirt, and they're not trying to sell you anything.", "chapter4-bonus-compliment"],
+  ["THE MOVING DAY", "Six friends show up with trucks. Nobody suddenly has a back injury.", "chapter4-bonus-moving"],
+  ["THE REFUND", "Customer service says, ‘You're absolutely right. Here's your money back.’", "chapter4-bonus-refund"],
+  ["THE BEST FRIEND", "Your friend defends you when you're not in the room.", "chapter4-bonus-best-friend"],
+  ["THE REUNION", "Your high school crush admits, ‘I actually had a huge crush on you back then.’", "chapter4-bonus-reunion"],
 ] as const;
 
 class ChapterFourBonus extends Phaser.Scene {
@@ -895,7 +895,7 @@ class ChapterFourBonus extends Phaser.Scene {
   constructor() { super("chapter4bonus"); }
 
   preload() {
-    this.load.image("chapter4-bonus-debt", "assets/chapter4-bonus-debt.png");
+    CHAPTER_FOUR_HEALING_MOMENTS.forEach(([, , imageKey]) => this.load.image(imageKey, `assets/${imageKey}.png`));
     this.load.audio("chapter4-bonus-music", "assets/chapter4-bonus-please-hold-me.mp3");
   }
 
@@ -911,22 +911,10 @@ class ChapterFourBonus extends Phaser.Scene {
     this.panel?.destroy(true);
     this.advanceTimer?.remove(false);
     const { width, height } = this.scale;
-    const [title, quote, icon] = CHAPTER_FOUR_HEALING_MOMENTS[this.step];
+    const [title, quote, imageKey] = CHAPTER_FOUR_HEALING_MOMENTS[this.step];
     const items: Phaser.GameObjects.GameObject[] = [];
 
-    if (this.step === 0) {
-      items.push(this.add.image(0, 0, "chapter4-bonus-debt").setOrigin(0).setDisplaySize(width, height));
-    } else {
-      const background = this.add.graphics();
-      const hue = Phaser.Display.Color.HSVToRGB((this.step * .071) % 1, .42, .28).color;
-      background.fillGradientStyle(0x080a12, hue, 0x17101c, 0x090d13, 1);
-      background.fillRect(0, 0, width, height);
-      items.push(background);
-      for (let i = 0; i < 18; i++) {
-        items.push(this.add.circle(Phaser.Math.Between(20, 1260), Phaser.Math.Between(110, 680), Phaser.Math.Between(2, 7), 0xffd28a, Phaser.Math.FloatBetween(.08, .3)));
-      }
-      items.push(this.add.text(width / 2, 298, icon, { fontSize: "150px" }).setOrigin(.5).setAlpha(.78));
-    }
+    items.push(this.add.image(0, 0, imageKey).setOrigin(0).setDisplaySize(width, height));
 
     items.push(this.add.rectangle(width / 2, 64, width, 128, 0x05070b, .82));
     items.push(this.add.rectangle(width / 2, 580, 1060, 218, 0x07090d, .82).setStrokeStyle(2, 0xe2b870, .7));
