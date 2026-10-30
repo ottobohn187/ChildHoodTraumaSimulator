@@ -124,6 +124,9 @@ class ChapterTwoBattle extends Phaser.Scene {
   private comboText!: Phaser.GameObjects.Text;
   private status!: Phaser.GameObjects.Text;
   private strikeButton!: Phaser.GameObjects.Container;
+  private blockButton!: Phaser.GameObjects.Container;
+  private blockShield!: Phaser.GameObjects.Ellipse;
+  private blocking = false;
   private timerText!: Phaser.GameObjects.Text;
   private fightMusic!: Phaser.Sound.BaseSound;
   private winningMusic!: Phaser.Sound.BaseSound;
@@ -147,6 +150,7 @@ class ChapterTwoBattle extends Phaser.Scene {
     this.hitStreak = 0;
     this.called30 = false;
     this.called10 = false;
+    this.blocking = false;
   }
 
   preload() {
@@ -184,7 +188,7 @@ class ChapterTwoBattle extends Phaser.Scene {
     this.add.rectangle(width / 2, 67, width, 134, 0x120403, .84);
     this.add.text(28, 15, "CHAPTER 2", { fontFamily: "Arial Black", fontSize: "17px", color: "#e0be82" });
     this.add.text(28, 40, "THE FIGHT SHE FINISHES", { fontFamily: "Arial Black", fontSize: "31px", color: "#fff0d1", stroke: "#230000", strokeThickness: 6 });
-    this.add.text(30, 86, "Build a rapid rhythm. Six presses unleash her tail.", { fontFamily: "Georgia", fontSize: "16px", color: "#dbc9b1" });
+    this.add.text(30, 86, "Three rapid presses swing her tail. Hold BLOCK to survive.", { fontFamily: "Georgia", fontSize: "16px", color: "#dbc9b1" });
     this.timerText = this.add.text(width - 28, 23, "00:45", { fontFamily: "Arial Black", fontSize: "32px", color: "#ffe5b5", stroke: "#230000", strokeThickness: 6 }).setOrigin(1, 0);
     this.add.text(width - 28, 63, "FIGHT ENDS AT 03:15", { fontFamily: "Arial Black", fontSize: "11px", color: "#c9ae82" }).setOrigin(1, 0);
 
@@ -194,9 +198,14 @@ class ChapterTwoBattle extends Phaser.Scene {
     this.motherBar = this.add.rectangle(width - 438, 158, 410, 20, 0x69a75b).setOrigin(0, .5);
 
     this.status = this.add.text(width / 2, 543, "PRESS TO BEGIN — YOU HAVE 45 SECONDS", { fontFamily: "Arial Black", fontSize: "19px", color: "#fff0ce", stroke: "#210000", strokeThickness: 5 }).setOrigin(.5);
-    this.comboText = this.add.text(width / 2, 574, "TAIL FORCE 0 / 6", { fontFamily: "Arial Black", fontSize: "14px", color: "#e4bd75", stroke: "#000", strokeThickness: 4 }).setOrigin(.5);
-    this.strikeButton = this.makeStrikeButton(width / 2, 650);
+    this.comboText = this.add.text(width / 2, 574, "TAIL FORCE 0 / 3", { fontFamily: "Arial Black", fontSize: "14px", color: "#e4bd75", stroke: "#000", strokeThickness: 4 }).setOrigin(.5);
+    this.strikeButton = this.makeStrikeButton(width / 2 - 115, 650);
+    this.blockButton = this.makeBlockButton(width / 2 + 115, 650);
+    this.blockShield = this.add.ellipse(730, 407, 240, 390, 0x5eb6d9, .08).setStrokeStyle(8, 0x9ee8ff, .82).setAlpha(0).setDepth(12);
     this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE).on("down", () => this.press());
+    const blockKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.B);
+    blockKey.on("down", () => this.setBlocking(true));
+    blockKey.on("up", () => this.setBlocking(false));
     this.input.keyboard!.on("keydown-M", () => this.scene.start("menu"));
     this.fightMusic = this.sound.add("chapter2-fight-music");
     this.winningMusic = this.sound.add("chapter2-winning-music");
@@ -223,19 +232,42 @@ class ChapterTwoBattle extends Phaser.Scene {
     return this.add.container(x, y, [ring, core, label, hint]);
   }
 
+  private makeBlockButton(x: number, y: number) {
+    const ring = this.add.circle(0, 0, 55, 0x071116, .95).setStrokeStyle(5, 0x78d7ee, 1);
+    const core = this.add.circle(0, 0, 42, 0x245f70, 1).setStrokeStyle(3, 0xc6f5ff, 1).setInteractive({ useHandCursor: true });
+    const label = this.add.text(0, -7, "BLOCK", { fontFamily: "Arial Black", fontSize: "18px", color: "#e9fbff", stroke: "#000", strokeThickness: 4 }).setOrigin(.5);
+    const hint = this.add.text(0, 18, "HOLD / B", { fontFamily: "Arial Black", fontSize: "8px", color: "#bcebf4" }).setOrigin(.5);
+    core.on("pointerdown", () => this.setBlocking(true));
+    core.on("pointerup", () => this.setBlocking(false));
+    core.on("pointerout", () => this.setBlocking(false));
+    return this.add.container(x, y, [ring, core, label, hint]);
+  }
+
+  private beginFight() {
+    if (this.started) return;
+    this.started = true;
+    this.fightMusic.play({ volume: .52, seek: 150 });
+    this.status.setText("ATTACK OR HOLD BLOCK — SURVIVE 45 SECONDS");
+  }
+
+  private setBlocking(active: boolean) {
+    if (this.ended) return;
+    if (active) this.beginFight();
+    this.blocking = active;
+    this.blockShield?.setAlpha(active ? .88 : 0);
+    this.blockButton?.setScale(active ? .9 : 1);
+    if (active) this.status.setText("BLOCKING — HOLD YOUR GROUND");
+  }
+
   private press() {
     if (this.ended) return;
-    if (!this.started) {
-      this.started = true;
-      this.fightMusic.play({ volume: .52, seek: 150 });
-      this.status.setText("PRESS FAST — DO NOT LET HIM REACH HER");
-    }
+    this.beginFight();
     const now = this.time.now;
     this.pressTimes = this.pressTimes.filter(t => now - t <= 750);
     this.pressTimes.push(now);
-    this.comboText.setText(`TAIL FORCE ${Math.min(this.pressTimes.length, 6)} / 6`);
+    this.comboText.setText(`TAIL FORCE ${Math.min(this.pressTimes.length, 3)} / 3`);
     this.tweens.add({ targets: this.strikeButton, scale: .87, duration: 55, yoyo: true });
-    if (this.pressTimes.length < 6) return;
+    if (this.pressTimes.length < 3) return;
     this.pressTimes = [];
     this.battle = tailStrike(this.battle);
     this.announceFirstBlood();
@@ -246,7 +278,7 @@ class ChapterTwoBattle extends Phaser.Scene {
     }
     this.attackClock += 420;
     this.status.setText("TAIL STRIKE! KEEP THE RHYTHM!");
-    this.comboText.setText("TAIL FORCE 0 / 6");
+    this.comboText.setText("TAIL FORCE 0 / 3");
     this.animateTailWhip();
     this.tweens.add({ targets: this.rex, x: this.rex.x - 105, y: this.rex.y - 18, angle: -9, duration: 210, yoyo: true, ease: "Back.out" });
     this.cameras.main.flash(90, 255, 185, 70, false);
@@ -270,32 +302,42 @@ class ChapterTwoBattle extends Phaser.Scene {
       this.showAnnouncerBanner("10 SECONDS REMAIN", "#ff6655");
     }
     if (this.remainingTime <= 0) {
-      this.status.setText("TIME RAN OUT — HE REACHES HER");
-      this.finish(false);
+      this.status.setText("SHE SURVIVED — YOU HELD ON!");
+      this.finish(true, false);
       return;
     }
     const now = this.time.now;
     this.pressTimes = this.pressTimes.filter(t => now - t <= 750);
-    this.comboText.setText(`TAIL FORCE ${Math.min(this.pressTimes.length, 6)} / 6`);
+    this.comboText.setText(`TAIL FORCE ${Math.min(this.pressTimes.length, 3)} / 3`);
     this.attackClock -= delta;
     if (this.attackClock <= 0) this.predatorAttack();
   }
 
   private predatorAttack() {
     this.attackClock = Phaser.Math.Between(1150, 1500);
-    this.battle = rexAttack(this.battle);
-    this.announceFirstBlood();
-    this.hitStreak = 0;
-    this.status.setText("HE BITES — FIGHT BACK FASTER!");
+    const blocked = this.blocking;
+    if (!blocked) {
+      this.battle = rexAttack(this.battle);
+      this.announceFirstBlood();
+      this.hitStreak = 0;
+      this.status.setText("HE BITES — FIGHT BACK FASTER!");
+    } else {
+      this.status.setText("BLOCKED! SHE HOLDS HER GROUND!");
+      this.cameras.main.flash(90, 90, 205, 255, false);
+    }
     const rexStart = this.rex.x;
     this.rex.setTexture("chapter2-rex-windup").setDisplaySize(650, 366);
     this.time.delayedCall(115, () => {
       this.rex.setTexture("chapter2-rex-bite").setDisplaySize(650, 366);
-      this.tweens.add({ targets: this.rex, x: rexStart + 190, y: this.rex.y - 8, duration: 155, hold: 140, yoyo: true, ease: "Power3", onYoyo: () => this.sprayBlood(665, 385), onComplete: () => this.rex.setTexture("chapter2-rex").setDisplaySize(650, 366) });
+      this.tweens.add({ targets: this.rex, x: rexStart + 190, y: this.rex.y - 8, duration: 155, hold: 140, yoyo: true, ease: "Power3", onYoyo: () => blocked ? this.blockShield.setScale(1.16) : this.sprayBlood(665, 385), onComplete: () => { this.rex.setTexture("chapter2-rex").setDisplaySize(650, 366); this.blockShield.setScale(1); } });
     });
-    this.tweens.add({ targets: this.mother, x: this.mother.x + 52, angle: 4, tint: 0xb72c24, duration: 105, hold: 120, yoyo: true, ease: "Back.out", onComplete: () => this.mother.clearTint() });
-    this.cameras.main.flash(135, 145, 0, 0, false);
-    this.cameras.main.shake(300, .02);
+    if (!blocked) {
+      this.tweens.add({ targets: this.mother, x: this.mother.x + 52, angle: 4, tint: 0xb72c24, duration: 105, hold: 120, yoyo: true, ease: "Back.out", onComplete: () => this.mother.clearTint() });
+      this.cameras.main.flash(135, 145, 0, 0, false);
+      this.cameras.main.shake(300, .02);
+    } else {
+      this.cameras.main.shake(120, .006);
+    }
     this.updateBattleUI();
   }
 
@@ -303,10 +345,10 @@ class ChapterTwoBattle extends Phaser.Scene {
     this.rexBar.width = 410 * this.battle.rexHealth / 100;
     this.motherBar.width = 410 * this.battle.motherHealth / 100;
     const outcome = battleOutcome(this.battle);
-    if (outcome !== "fighting") this.finish(outcome === "won");
+    if (outcome !== "fighting") this.finish(outcome === "won", outcome === "won");
   }
 
-  private finish(won: boolean) {
+  private finish(won: boolean, deathBlow = false) {
     this.ended = true;
     this.fightMusic.stop();
     if (won) localStorage.setItem(CHAPTER_TWO_HEALED_KEY, "true");
@@ -318,14 +360,20 @@ class ChapterTwoBattle extends Phaser.Scene {
       this.tweens.add({ targets: this.mother, y: this.mother.y + 190, angle: 8, alpha: .2, duration: 1500, ease: "Quad.in" });
     }
     if (won) {
-      this.showAnnouncerBanner("ULTRAKILL", "#ff2b20");
-      this.playAnnouncer("sfx-ultrakill", () => {
+      const announceWin = () => {
         this.showAnnouncerBanner("YOU WON", "#ffe08a");
         this.playAnnouncer("sfx-winner", () => {
           this.winningMusic.play({ volume: .58 });
           this.showBattleEnding(true);
         });
-      });
+      };
+      if (deathBlow) {
+        this.showAnnouncerBanner("ULTRAKILL", "#ff2b20");
+        this.playAnnouncer("sfx-ultrakill", announceWin);
+      } else {
+        this.showAnnouncerBanner("SURVIVOR", "#8ee8ff");
+        this.time.delayedCall(750, announceWin);
+      }
     } else {
       this.showAnnouncerBanner("FAILED", "#d9d9d9");
       this.playAnnouncer("sfx-failed", () => {
