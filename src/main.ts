@@ -107,7 +107,9 @@ class ChapterSelect extends Phaser.Scene {
 
 class ChapterTwoBattle extends Phaser.Scene {
   private battle: BattleState = { motherHealth: 100, rexHealth: 100 };
+  private started = false;
   private ended = false;
+  private remainingTime = 45;
   private pressTimes: number[] = [];
   private attackClock = 1450;
   private mother!: Phaser.GameObjects.Image;
@@ -117,12 +119,17 @@ class ChapterTwoBattle extends Phaser.Scene {
   private comboText!: Phaser.GameObjects.Text;
   private status!: Phaser.GameObjects.Text;
   private strikeButton!: Phaser.GameObjects.Container;
+  private timerText!: Phaser.GameObjects.Text;
+  private fightMusic!: Phaser.Sound.BaseSound;
+  private winningMusic!: Phaser.Sound.BaseSound;
 
   constructor() { super("chapter2"); }
 
   init() {
     this.battle = { motherHealth: 100, rexHealth: 100 };
+    this.started = false;
     this.ended = false;
+    this.remainingTime = 45;
     this.pressTimes = [];
     this.attackClock = 1450;
   }
@@ -131,6 +138,9 @@ class ChapterTwoBattle extends Phaser.Scene {
     this.load.image("chapter2-arena", "assets/chapter2-volcanic-arena.png");
     this.load.image("chapter2-mother", "assets/chapter2-mother.png");
     this.load.image("chapter2-rex", "assets/chapter2-rex.png");
+    this.load.image("chapter2-victory", "assets/chapter2-sunset-victory.png");
+    this.load.audio("chapter2-fight-music", "assets/chapter2-fight-cover.mp3");
+    this.load.audio("chapter2-winning-music", "assets/chapter2-winning-cover.mp3");
   }
 
   create() {
@@ -145,17 +155,22 @@ class ChapterTwoBattle extends Phaser.Scene {
     this.add.text(28, 15, "CHAPTER 2", { fontFamily: "Arial Black", fontSize: "17px", color: "#e0be82" });
     this.add.text(28, 40, "THE FIGHT SHE FINISHES", { fontFamily: "Arial Black", fontSize: "31px", color: "#fff0d1", stroke: "#230000", strokeThickness: 6 });
     this.add.text(30, 86, "Build a rapid rhythm. Six presses unleash her tail.", { fontFamily: "Georgia", fontSize: "16px", color: "#dbc9b1" });
+    this.timerText = this.add.text(width - 28, 23, "00:45", { fontFamily: "Arial Black", fontSize: "32px", color: "#ffe5b5", stroke: "#230000", strokeThickness: 6 }).setOrigin(1, 0);
+    this.add.text(width - 28, 63, "FIGHT ENDS AT 03:15", { fontFamily: "Arial Black", fontSize: "11px", color: "#c9ae82" }).setOrigin(1, 0);
 
     this.makeHealthMeter(28, 128, "SHARPTOOTH", 0xb72222);
     this.rexBar = this.add.rectangle(30, 158, 410, 20, 0xb72222).setOrigin(0, .5);
     this.makeHealthMeter(width - 440, 128, "LITTLEFOOT'S MOM", 0x69a75b);
     this.motherBar = this.add.rectangle(width - 438, 158, 410, 20, 0x69a75b).setOrigin(0, .5);
 
-    this.status = this.add.text(width / 2, 543, "PRESS FAST — DO NOT LET HIM REACH HER", { fontFamily: "Arial Black", fontSize: "19px", color: "#fff0ce", stroke: "#210000", strokeThickness: 5 }).setOrigin(.5);
+    this.status = this.add.text(width / 2, 543, "PRESS TO BEGIN — YOU HAVE 45 SECONDS", { fontFamily: "Arial Black", fontSize: "19px", color: "#fff0ce", stroke: "#210000", strokeThickness: 5 }).setOrigin(.5);
     this.comboText = this.add.text(width / 2, 574, "TAIL FORCE 0 / 6", { fontFamily: "Arial Black", fontSize: "14px", color: "#e4bd75", stroke: "#000", strokeThickness: 4 }).setOrigin(.5);
     this.strikeButton = this.makeStrikeButton(width / 2, 650);
     this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE).on("down", () => this.press());
     this.input.keyboard!.on("keydown-M", () => this.scene.start("menu"));
+    this.fightMusic = this.sound.add("chapter2-fight-music");
+    this.winningMusic = this.sound.add("chapter2-winning-music");
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.sound.stopAll());
   }
 
   private makeHealthMeter(x: number, y: number, label: string, color: number) {
@@ -176,6 +191,11 @@ class ChapterTwoBattle extends Phaser.Scene {
 
   private press() {
     if (this.ended) return;
+    if (!this.started) {
+      this.started = true;
+      this.fightMusic.play({ volume: .52, seek: 150 });
+      this.status.setText("PRESS FAST — DO NOT LET HIM REACH HER");
+    }
     const now = this.time.now;
     this.pressTimes = this.pressTimes.filter(t => now - t <= 750);
     this.pressTimes.push(now);
@@ -195,7 +215,14 @@ class ChapterTwoBattle extends Phaser.Scene {
   }
 
   update(_time: number, delta: number) {
-    if (this.ended) return;
+    if (this.ended || !this.started) return;
+    this.remainingTime = Math.max(0, this.remainingTime - delta / 1000);
+    this.timerText.setText(`00:${Math.ceil(this.remainingTime).toString().padStart(2, "0")}`);
+    if (this.remainingTime <= 0) {
+      this.status.setText("TIME RAN OUT — HE REACHES HER");
+      this.finish(false);
+      return;
+    }
     const now = this.time.now;
     this.pressTimes = this.pressTimes.filter(t => now - t <= 750);
     this.comboText.setText(`TAIL FORCE ${Math.min(this.pressTimes.length, 6)} / 6`);
@@ -222,6 +249,8 @@ class ChapterTwoBattle extends Phaser.Scene {
 
   private finish(won: boolean) {
     this.ended = true;
+    this.fightMusic.stop();
+    if (won) this.winningMusic.play({ volume: .58 });
     if (won) localStorage.setItem(CHAPTER_TWO_HEALED_KEY, "true");
     this.tweens.killTweensOf([this.rex, this.mother]);
     if (won) {
@@ -235,13 +264,20 @@ class ChapterTwoBattle extends Phaser.Scene {
 
   private showBattleEnding(won: boolean) {
     const { width, height } = this.scale;
-    this.add.rectangle(width / 2, height / 2, width, height, 0x100201, .82).setDepth(20);
-    this.add.text(width / 2, height / 2 - 100, won ? "SHE SURVIVES" : "SHE FALLS AGAIN", { fontFamily: "Arial Black", fontSize: "49px", color: won ? "#f4d68a" : "#c9b5aa", stroke: "#250000", strokeThickness: 8 }).setOrigin(.5).setDepth(21);
-    this.add.text(width / 2, height / 2 - 34, won ? "This time, the fight ends differently." : "The memory is unchanged. Get back up and rewrite it.", { fontFamily: "Georgia", fontSize: "23px", color: "#f2dfc5" }).setOrigin(.5).setDepth(21);
-    const button = this.add.rectangle(width / 2, height / 2 + 70, 280, 68, 0x8d271d, 1).setStrokeStyle(3, 0xf4cf83, 1).setDepth(21).setInteractive({ useHandCursor: true });
-    this.add.text(width / 2, height / 2 + 70, won ? "CONTINUE" : "RETRY", { fontFamily: "Arial Black", fontSize: "23px", color: "#fff0d0", stroke: "#000", strokeThickness: 4 }).setOrigin(.5).setDepth(22);
-    button.on("pointerdown", () => won ? this.scene.start("menu") : this.scene.restart());
-    this.add.text(width / 2, height / 2 + 130, "M: CHAPTER SELECT", { fontFamily: "Arial Black", fontSize: "12px", color: "#bcae99" }).setOrigin(.5).setDepth(21);
+    if (won) {
+      this.add.image(width / 2, height / 2, "chapter2-victory").setDisplaySize(width, height).setDepth(20);
+      this.add.rectangle(width / 2, 80, width, 160, 0x1b0903, .68).setDepth(21);
+      this.add.rectangle(width / 2, height - 80, width, 160, 0x1b0903, .52).setDepth(21);
+    } else {
+      this.add.rectangle(width / 2, height / 2, width, height, 0x100201, .82).setDepth(20);
+    }
+    this.add.text(width / 2, won ? 31 : height / 2 - 100, won ? "THEY WALK AWAY TOGETHER" : "SHE FALLS AGAIN", { fontFamily: "Arial Black", fontSize: won ? "40px" : "49px", color: won ? "#fff0bd" : "#c9b5aa", stroke: "#250000", strokeThickness: 8 }).setOrigin(.5, won ? 0 : .5).setDepth(22);
+    this.add.text(width / 2, won ? 84 : height / 2 - 34, won ? "This time, Littlefoot gets to keep his mother." : "The memory is unchanged. Get back up and rewrite it.", { fontFamily: "Georgia", fontSize: "23px", color: "#f2dfc5", stroke: "#250000", strokeThickness: 4 }).setOrigin(.5).setDepth(22);
+    const buttonY = won ? height - 82 : height / 2 + 70;
+    const button = this.add.rectangle(width / 2, buttonY, 280, 68, 0x8d271d, 1).setStrokeStyle(3, 0xf4cf83, 1).setDepth(22).setInteractive({ useHandCursor: true });
+    this.add.text(width / 2, buttonY, won ? "CONTINUE" : "TRY AGAIN", { fontFamily: "Arial Black", fontSize: "23px", color: "#fff0d0", stroke: "#000", strokeThickness: 4 }).setOrigin(.5).setDepth(23);
+    button.on("pointerdown", () => { this.sound.stopAll(); won ? this.scene.start("menu") : this.scene.restart(); });
+    this.add.text(width / 2, won ? height - 30 : height / 2 + 130, "M: CHAPTER SELECT", { fontFamily: "Arial Black", fontSize: "12px", color: "#d3c3aa", stroke: "#000", strokeThickness: 3 }).setOrigin(.5).setDepth(22);
   }
 
   private makeAsh() {
