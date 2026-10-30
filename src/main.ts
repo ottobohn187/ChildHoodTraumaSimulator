@@ -490,6 +490,7 @@ class ChapterThreeRescue extends Phaser.Scene {
   private status!: Phaser.GameObjects.Text;
   private distanceText!: Phaser.GameObjects.Text;
   private runButton!: Phaser.GameObjects.Container;
+  private music!: Phaser.Sound.BaseSound;
 
   constructor() { super("chapter3"); }
 
@@ -504,6 +505,7 @@ class ChapterThreeRescue extends Phaser.Scene {
     this.load.image("chapter3-runner", "assets/chapter3-runner.png");
     this.load.image("chapter3-toon", "assets/chapter3-toon-cage.png");
     this.load.image("chapter3-victory", "assets/chapter3-victory.png");
+    this.load.audio("chapter3-music", "assets/chapter3-dip-music.mp3");
   }
 
   create() {
@@ -532,6 +534,7 @@ class ChapterThreeRescue extends Phaser.Scene {
     this.status = this.add.text(width / 2, 559, "PRESS RUN TO BEGIN", { fontFamily: "Arial Black", fontSize: "20px", color: "#f3ffe8", stroke: "#001807", strokeThickness: 6 }).setOrigin(.5).setDepth(12);
     this.distanceText = this.add.text(width / 2, 588, "100 METERS AWAY", { fontFamily: "Arial Black", fontSize: "13px", color: "#bdddac", stroke: "#001807", strokeThickness: 4 }).setOrigin(.5).setDepth(12);
     this.runButton = this.makeRunButton(width / 2, 658);
+    this.music = this.sound.add("chapter3-music", { volume: .56 });
 
     this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE).on("down", () => this.pressRun());
     this.input.keyboard!.on("keydown-M", () => this.scene.start("menu"));
@@ -567,6 +570,7 @@ class ChapterThreeRescue extends Phaser.Scene {
     if (this.ended) return;
     if (!this.started) {
       this.started = true;
+      this.music.play({ seek: 195 });
       this.status.setText("RUN — DON'T LET THE CAGE REACH THE DIP!");
     }
     this.rescue = tapRun(this.rescue);
@@ -596,6 +600,7 @@ class ChapterThreeRescue extends Phaser.Scene {
   private finish(won: boolean) {
     if (this.ended) return;
     this.ended = true;
+    this.music.stop();
     this.runButton.setAlpha(.35);
     this.tweens.killTweensOf([this.runner, this.toon]);
     if (won) {
