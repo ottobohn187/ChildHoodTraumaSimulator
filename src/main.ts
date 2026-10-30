@@ -491,6 +491,8 @@ class ChapterThreeRescue extends Phaser.Scene {
   private distanceText!: Phaser.GameObjects.Text;
   private runButton!: Phaser.GameObjects.Container;
   private music!: Phaser.Sound.BaseSound;
+  private failureMusic!: Phaser.Sound.BaseSound;
+  private winningMusic!: Phaser.Sound.BaseSound;
 
   constructor() { super("chapter3"); }
 
@@ -506,6 +508,8 @@ class ChapterThreeRescue extends Phaser.Scene {
     this.load.image("chapter3-toon", "assets/chapter3-toon-cage.png");
     this.load.image("chapter3-victory", "assets/chapter3-victory.png");
     this.load.audio("chapter3-music", "assets/chapter3-dip-music.mp3");
+    this.load.audio("chapter3-failed-music", "assets/chapter3-failed.mp3");
+    this.load.audio("chapter3-winning-music", "assets/chapter3-winning.mp3");
   }
 
   create() {
@@ -535,6 +539,8 @@ class ChapterThreeRescue extends Phaser.Scene {
     this.distanceText = this.add.text(width / 2, 588, "100 METERS AWAY", { fontFamily: "Arial Black", fontSize: "13px", color: "#bdddac", stroke: "#001807", strokeThickness: 4 }).setOrigin(.5).setDepth(12);
     this.runButton = this.makeRunButton(width / 2, 658);
     this.music = this.sound.add("chapter3-music", { volume: .56 });
+    this.failureMusic = this.sound.add("chapter3-failed-music", { volume: .62 });
+    this.winningMusic = this.sound.add("chapter3-winning-music", { volume: .62 });
 
     this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE).on("down", () => this.pressRun());
     this.input.keyboard!.on("keydown-M", () => this.scene.start("menu"));
@@ -620,6 +626,7 @@ class ChapterThreeRescue extends Phaser.Scene {
 
   private showEnding(won: boolean) {
     const { width, height } = this.scale;
+    (won ? this.winningMusic : this.failureMusic).play();
     if (won) {
       this.add.image(width / 2, height / 2, "chapter3-victory").setDisplaySize(width, height).setDepth(30);
       this.add.rectangle(width / 2, 78, width, 156, 0x06100a, .68).setDepth(31);
