@@ -516,7 +516,7 @@ class ChapterThreeRescue extends Phaser.Scene {
     this.load.image("chapter3-factory", "assets/chapter3-dip-factory.png");
     this.load.image("chapter3-runner", "assets/chapter3-runner.png");
     this.load.image("chapter3-toon", "assets/chapter3-shoe-hand.png");
-    this.load.image("chapter3-judge", "assets/chapter3-judge.png");
+    this.load.image("chapter3-judge", "assets/chapter3-judge-v3.png");
     this.load.image("chapter3-victory", "assets/chapter3-victory-shoe.png");
     this.load.audio("chapter3-music", "assets/chapter3-dip-music.mp3");
     this.load.audio("chapter3-failed-music", "assets/chapter3-failed.mp3");
@@ -530,9 +530,9 @@ class ChapterThreeRescue extends Phaser.Scene {
     this.makeDipMist();
 
     this.runner = this.add.image(92, 507, "chapter3-runner").setDisplaySize(268, 179).setDepth(8);
-    this.judge = this.add.image(1152, 327, "chapter3-judge").setDisplaySize(292, 438).setDepth(5);
+    this.judge = this.add.image(1140, 220, "chapter3-judge").setDisplaySize(260, 390).setDepth(5);
     this.judgeArm = this.add.graphics().setDepth(6);
-    this.toon = this.add.image(1062, 270, "chapter3-toon").setDisplaySize(132, 198).setDepth(7);
+    this.toon = this.add.image(1180, 355, "chapter3-toon").setDisplaySize(132, 198).setDepth(7);
     this.drawJudgeArm();
 
     this.add.rectangle(width / 2, 66, width, 132, 0x020806, .86).setDepth(10);
@@ -609,7 +609,7 @@ class ChapterThreeRescue extends Phaser.Scene {
     this.timerText.setText(`00:${Math.ceil(this.rescue.time).toString().padStart(2, "0")}`);
     this.distanceBar.width = 330 * this.rescue.distance / 100;
     this.dangerBar.width = 330 * this.rescue.danger / 100;
-    this.toon.setY(270 + this.rescue.danger * 1.95);
+    this.toon.setY(355 + this.rescue.danger * 1.2);
     this.drawJudgeArm();
     const meters = Math.max(0, Math.ceil(100 - this.rescue.distance));
     this.distanceText.setText(meters > 0 ? `${meters} METERS AWAY` : "REACH THE SHOE!");
@@ -630,7 +630,7 @@ class ChapterThreeRescue extends Phaser.Scene {
       this.status.setText("YOU REACHED IT — GRAB THE SHOE!");
       this.cameras.main.flash(180, 220, 255, 190, false);
       this.tweens.add({ targets: this.runner, x: 960, y: 490, duration: 500, ease: "Power2" });
-      this.tweens.add({ targets: this.toon, y: 185, x: 995, angle: 0, duration: 700, ease: "Back.out" });
+      this.tweens.add({ targets: this.toon, y: 235, x: 1040, angle: 0, duration: 700, ease: "Back.out" });
       this.tweens.add({ targets: this.judge, x: 1325, alpha: .22, duration: 760, ease: "Quad.in" });
       this.tweens.add({ targets: this.judgeArm, alpha: 0, duration: 650 });
     } else {
@@ -672,8 +672,8 @@ class ChapterThreeRescue extends Phaser.Scene {
   private drawJudgeArm() {
     if (!this.judgeArm || !this.toon) return;
     this.judgeArm.clear();
-    const shoulderX = 1110;
-    const shoulderY = 300;
+    const shoulderX = 1212;
+    const shoulderY = 278;
     const handX = this.toon.x;
     const handY = this.toon.y - 77;
     this.judgeArm.lineStyle(46, 0x050706, 1).beginPath().moveTo(shoulderX, shoulderY).lineTo(handX, handY).strokePath();
