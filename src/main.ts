@@ -947,6 +947,54 @@ const CHAPTER_FOUR_HEALING_MOMENTS = [
   ["THE REUNION", "Your high school crush admits, ‘I actually had a huge crush on you back then.’", "chapter4-bonus-reunion"],
 ] as const;
 
+function addCrtTelevision(scene: Phaser.Scene) {
+  const { width, height } = scene.scale;
+  const overlayDepth = 90;
+
+  scene.add.rectangle(width / 2, height / 2, width, height, 0x173629, .09).setDepth(overlayDepth);
+  const scanlines = scene.add.graphics().setDepth(overlayDepth + 1);
+  scanlines.lineStyle(1, 0x050807, .2);
+  for (let y = 2; y < height; y += 4) scanlines.lineBetween(0, y, width, y);
+
+  const colorBleed = scene.add.graphics().setDepth(overlayDepth + 2);
+  colorBleed.fillStyle(0xff244f, .055).fillRect(0, 0, 5, height);
+  colorBleed.fillStyle(0x30bfff, .055).fillRect(width - 5, 0, 5, height);
+
+  const roll = scene.add.rectangle(width / 2, -70, width - 54, 115, 0xd8fff0, .055).setDepth(overlayDepth + 2).setBlendMode(Phaser.BlendModes.ADD);
+  scene.tweens.add({ targets: roll, y: height + 80, duration: 4300, repeat: -1, ease: "Linear" });
+
+  const bezel = scene.add.graphics().setDepth(overlayDepth + 5);
+  bezel.fillStyle(0x15110d, 1).fillRect(0, 0, width, 23).fillRect(0, height - 25, width, 25).fillRect(0, 0, 25, height).fillRect(width - 25, 0, 25, height);
+  bezel.lineStyle(9, 0x3f3428, 1).strokeRoundedRect(17, 15, width - 34, height - 30, 42);
+  bezel.lineStyle(3, 0xb08a58, .52).strokeRoundedRect(25, 23, width - 50, height - 46, 35);
+  bezel.lineStyle(2, 0x050403, .9).strokeRoundedRect(30, 28, width - 60, height - 56, 31);
+  for (let i = 0; i < 14; i++) bezel.fillStyle(0x050403, .9).fillRoundedRect(430 + i * 31, height - 19, 18, 4, 2);
+
+  scene.add.text(42, height - 19, "COLORTRON 1987", { fontFamily: "Arial Black", fontSize: "8px", color: "#9c825f" }).setOrigin(0, .5).setDepth(overlayDepth + 6);
+  scene.add.text(width - 42, height - 19, "CH 03  •  MEMORY PLAYBACK", { fontFamily: "Courier New", fontStyle: "bold", fontSize: "8px", color: "#9c825f" }).setOrigin(1, .5).setDepth(overlayDepth + 6);
+
+  const noise = scene.add.graphics().setDepth(overlayDepth + 3).setAlpha(0);
+  const whiteFlash = scene.add.rectangle(width / 2, height / 2, width - 54, height - 50, 0xeafff4, 1).setDepth(overlayDepth + 3).setAlpha(0);
+  const burst = () => {
+    if (!scene.sys.isActive()) return;
+    noise.clear();
+    for (let i = 0; i < 90; i++) {
+      const shade = Phaser.Math.RND.pick([0xffffff, 0xb8c8be, 0x111b18]);
+      noise.fillStyle(shade, Phaser.Math.FloatBetween(.08, .34));
+      noise.fillRect(Phaser.Math.Between(28, width - 30), Phaser.Math.Between(26, height - 30), Phaser.Math.Between(10, 190), Phaser.Math.Between(1, 5));
+    }
+    noise.setAlpha(Phaser.Math.FloatBetween(.48, .82));
+    whiteFlash.setAlpha(Phaser.Math.FloatBetween(.025, .085));
+    scene.cameras.main.shake(90, .0025);
+    scene.time.delayedCall(Phaser.Math.Between(70, 150), () => {
+      noise.setAlpha(0);
+      whiteFlash.setAlpha(0);
+    });
+    scene.time.delayedCall(Phaser.Math.Between(1700, 4600), burst);
+  };
+  scene.time.delayedCall(Phaser.Math.Between(650, 1800), burst);
+}
+
 class ChapterFourBonus extends Phaser.Scene {
   private step = 0;
   private panel?: Phaser.GameObjects.Container;
@@ -965,6 +1013,7 @@ class ChapterFourBonus extends Phaser.Scene {
     this.music = this.sound.add("chapter4-bonus-music", { volume: .6, loop: true });
     this.music.play();
     this.showMoment();
+    addCrtTelevision(this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.sound.stopAll());
   }
 
@@ -1059,6 +1108,7 @@ class BonusHealing extends Phaser.Scene {
     this.music = this.sound.add("bonus-music", { volume: .3, loop: true });
     this.music.play();
     this.showStep();
+    addCrtTelevision(this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.advanceTimer?.remove(false);
       this.voiceTimer?.remove(false);
