@@ -1361,6 +1361,7 @@ class ChapterFiveRun extends Phaser.Scene {
   private jumpButton!: Phaser.GameObjects.Container;
   private mainMusic!: Phaser.Sound.BaseSound;
   private winningMusic!: Phaser.Sound.BaseSound;
+  private failureMusic!: Phaser.Sound.BaseSound;
   private elapsed = 0;
   private jumps = 0;
   private spawnClock = 0;
@@ -1382,6 +1383,7 @@ class ChapterFiveRun extends Phaser.Scene {
     this.load.image("chapter5-failure", "assets/chapter5-failure.png");
     this.load.audio("chapter5-main", "assets/chapter5-main.mp3");
     this.load.audio("chapter5-winning", "assets/chapter5-winning.mp3");
+    this.load.audio("chapter5-failure-music", "assets/chapter5-failure-music.mp3");
     this.load.audio("chapter5-shotgun", "assets/chapter4-shotgunblast.mp3");
   }
 
@@ -1405,6 +1407,7 @@ class ChapterFiveRun extends Phaser.Scene {
     this.jumpButton = this.makeJumpButton(width / 2, 650);
     this.mainMusic = this.sound.add("chapter5-main", { volume: .64 });
     this.winningMusic = this.sound.add("chapter5-winning", { volume: .64 });
+    this.failureMusic = this.sound.add("chapter5-failure-music", { volume: .66 });
     this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE).on("down", () => this.jump());
     this.input.keyboard!.on("keydown-M", () => this.scene.start("menu"));
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.sound.stopAll());
@@ -1508,7 +1511,11 @@ class ChapterFiveRun extends Phaser.Scene {
   private showEnding(won: boolean) {
     const { width, height } = this.scale;
     if (won) this.winningMusic.play({ seek: 30, loop: true });
+    else this.failureMusic.play({ loop: true });
     this.add.image(width / 2, height / 2, won ? "chapter5-victory" : "chapter5-failure").setDisplaySize(width, height).setDepth(40);
+    if (!won) {
+      this.add.image(650, 495, "chapter5-body-reference").setCrop(185, 0, 245, 108).setScale(1.5).setAngle(-5).setDepth(41);
+    }
     this.add.rectangle(width / 2, 72, width, 144, 0x020508, .72).setDepth(41);
     this.add.rectangle(width / 2, height - 91, width, 182, 0x020508, .72).setDepth(41);
     this.add.text(width / 2, 26, won ? "SHE MADE IT HOME" : "ONE LOG. ONE SHOT.", { fontFamily: "Arial Black", fontSize: "43px", color: won ? "#fff4c7" : "#d8e1e8", stroke: "#000", strokeThickness: 8 }).setOrigin(.5, 0).setDepth(42);
