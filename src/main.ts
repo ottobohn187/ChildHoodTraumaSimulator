@@ -1406,7 +1406,7 @@ class ChapterFiveRun extends Phaser.Scene {
 
   update(_time: number, delta: number) {
     if (!this.started || this.ended) return;
-    const seconds = delta / 1000;
+    const seconds = Math.min(delta / 1000, .05);
     this.elapsed += seconds;
     this.spawnClock -= seconds;
     if (this.spawnClock <= 0 && this.jumps + this.logs.length < 10) {
@@ -1414,7 +1414,8 @@ class ChapterFiveRun extends Phaser.Scene {
       this.spawnClock = 1.7;
     }
     for (const log of [...this.logs]) {
-      log.x -= 520 * seconds;
+      log.x -= 470 * seconds;
+      log.setAngle(Math.sin(this.elapsed * 9 + log.getData("phase")) * 3.5);
       if (!log.getData("passed") && log.x < this.mother.x - 155) {
         log.setData("passed", true);
         this.jumps += 1;
@@ -1422,7 +1423,7 @@ class ChapterFiveRun extends Phaser.Scene {
         this.cameras.main.flash(80, 190, 235, 255, false);
         if (this.jumps >= 10) { this.finish(true); return; }
       }
-      if (!log.getData("passed") && Math.abs(log.x - this.mother.x) < 145 && this.mother.y > 415) {
+      if (!log.getData("passed") && Math.abs(log.x - this.mother.x) < 190 && this.mother.y > 455) {
         this.finish(false); return;
       }
       if (log.x < -260) { this.logs.splice(this.logs.indexOf(log), 1); log.destroy(); }
@@ -1448,16 +1449,16 @@ class ChapterFiveRun extends Phaser.Scene {
     if (!this.started) {
       this.started = true;
       this.mainMusic.play({ seek: 30 });
-      this.spawnLog();
+      this.spawnLog(true);
       this.spawnClock = 1.7;
     }
     this.jumping = true;
-    this.tweens.add({ targets: this.mother, y: 335, angle: -6, duration: 300, ease: "Sine.Out", yoyo: true, hold: 130, onComplete: () => { this.mother.setY(500).setAngle(0); this.jumping = false; } });
+    this.tweens.add({ targets: this.mother, y: 325, angle: -6, duration: 420, ease: "Sine.Out", yoyo: true, hold: 520, onComplete: () => { this.mother.setY(500).setAngle(0); this.jumping = false; } });
     this.tweens.add({ targets: this.jumpButton, scale: .86, duration: 60, yoyo: true });
   }
 
-  private spawnLog() {
-    const log = this.add.image(1400, 555, "chapter5-log").setDisplaySize(270, 90).setDepth(7).setData("passed", false);
+  private spawnLog(first = false) {
+    const log = this.add.image(first ? 900 : 1420, 530, "chapter5-log").setDisplaySize(460, 130).setDepth(9).setData("passed", false).setData("phase", Phaser.Math.FloatBetween(0, Math.PI * 2));
     this.logs.push(log);
   }
 
