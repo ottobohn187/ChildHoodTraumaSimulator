@@ -1680,8 +1680,8 @@ class ChapterSixTrueEnding extends Phaser.Scene {
     this.add.text(width / 2, 210, "BROKE THE CYCLE", { fontFamily: "Arial Black", fontSize: "58px", color: "#ffffff", stroke: "#48195b", strokeThickness: 9 }).setOrigin(.5);
     this.add.text(width / 2, 320, "“You couldn't save your childhood.\nBut you can stop fighting it.”", { fontFamily: "Georgia", fontStyle: "italic", fontSize: "30px", align: "center", color: "#e9dcea", lineSpacing: 12 }).setOrigin(.5);
     const button = this.add.rectangle(width / 2, 485, 280, 58, 0x5d2c66, 1).setStrokeStyle(2, 0xd9a9df, 1).setInteractive({ useHandCursor: true });
-    this.add.text(width / 2, 485, "POST-CREDITS", { fontFamily: "Arial Black", fontSize: "17px", color: "#fff" }).setOrigin(.5);
-    button.on("pointerdown", () => this.showPostCredits());
+    this.add.text(width / 2, 485, "END CREDITS", { fontFamily: "Arial Black", fontSize: "17px", color: "#fff" }).setOrigin(.5);
+    button.on("pointerdown", () => this.scene.start("chapter6credits"));
   }
 
   private showPostCredits() {
@@ -1700,4 +1700,91 @@ class ChapterSixTrueEnding extends Phaser.Scene {
   }
 }
 
-new Phaser.Game({ type: Phaser.AUTO, parent: "game", width: 1280, height: 720, backgroundColor: "#07100f", scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH }, scene: [ChapterSelect, SwampRescue, ChapterTwoBattle, BonusHealing, ChapterThreeRescue, ChapterFourRescue, ChapterFourBonus, ChapterFiveRun, ChapterSixTrueEnding] });
+class ChapterSixEndCredits extends Phaser.Scene {
+  private music!: Phaser.Sound.BaseSound;
+  private currentImage?: Phaser.GameObjects.Image;
+  private currentShade?: Phaser.GameObjects.Rectangle;
+  private currentTitle?: Phaser.GameObjects.Text;
+  private currentCaption?: Phaser.GameObjects.Text;
+
+  constructor() { super("chapter6credits"); }
+
+  preload() {
+    const images = ["healing-room", "bike", "parent", "porch", "anxiety", "divorce", "bad-parent", "job", "teams"];
+    images.forEach((name) => this.load.image(`chapter6-credits-${name}`, `assets/chapter6-credits-${name}.png`));
+    this.load.audio("chapter6-end-credits", "assets/chapter6-end-credits.mp3");
+  }
+
+  create() {
+    this.cameras.main.setBackgroundColor(0x000000);
+    this.music = this.sound.add("chapter6-end-credits", { volume: .74 });
+    this.music.play();
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.sound.stopAll());
+
+    const beats = [
+      { at: 0, key: "healing-room", title: "YOU CAME BACK", caption: "The child no longer has to wait alone.", horror: false },
+      { at: 3000, key: "bike", title: "LEARNING TO RIDE", caption: "This time, someone runs beside you.", horror: false },
+      { at: 6000, key: "parent", title: "THE PARENT YOU NEEDED", caption: "Soft voices. Safe rooms. A different ending.", horror: false },
+      { at: 9000, key: "porch", title: "THE CHILD GETS TO REST", caption: "Maybe healing can feel this ordinary.", horror: false },
+      { at: 12000, key: "anxiety", title: "ADULTHOOD UNLOCKED", caption: "CRIPPLING ANXIETY", horror: true },
+      { at: 14400, key: "divorce", title: "DIVORCE", caption: "Two homes. One empty chair.", horror: true },
+      { at: 16800, key: "bad-parent", title: "THE CYCLE KNOCKS", caption: "What if you become the parent you feared?", horror: true },
+      { at: 19200, key: "job", title: "YOUR DREAM JOB", caption: "The dream was apparently fluorescent.", horror: true },
+      { at: 21600, key: "teams", title: "MICROSOFT TEAMS", caption: "INCOMING CALL", horror: true }
+    ];
+
+    beats.forEach((beat) => this.time.delayedCall(beat.at, () => this.showBeat(beat)));
+    this.time.delayedCall(24400, () => this.showPostCredits());
+  }
+
+  private showBeat(beat: { key: string; title: string; caption: string; horror: boolean }) {
+    const { width, height } = this.scale;
+    const next = this.add.image(width / 2, height / 2, `chapter6-credits-${beat.key}`).setDisplaySize(width, height).setAlpha(0).setDepth(1);
+    const shade = this.add.rectangle(width / 2, height - 85, width, 170, 0x000000, beat.horror ? .82 : .62).setAlpha(0).setDepth(2);
+    const title = this.add.text(42, height - 143, beat.title, {
+      fontFamily: "Arial Black", fontSize: beat.horror ? "37px" : "33px", color: beat.horror ? "#ffdddd" : "#fff3cd", stroke: "#000000", strokeThickness: 8
+    }).setAlpha(0).setDepth(3);
+    const caption = this.add.text(45, height - 83, beat.caption, {
+      fontFamily: beat.horror ? "Arial Black" : "Georgia", fontStyle: beat.horror ? "bold" : "italic", fontSize: beat.horror ? "24px" : "23px", color: beat.horror ? "#ff5d69" : "#ffffff", stroke: "#000000", strokeThickness: 6
+    }).setAlpha(0).setDepth(3);
+
+    if (beat.key === "teams") {
+      const ring = this.add.circle(width - 110, 105, 54, 0xd72b55, .92).setStrokeStyle(5, 0xffb3c5, 1).setDepth(4).setAlpha(0);
+      const phone = this.add.text(width - 110, 105, "☎", { fontFamily: "Arial Black", fontSize: "46px", color: "#ffffff" }).setOrigin(.5).setDepth(5).setAlpha(0);
+      this.tweens.add({ targets: [ring, phone], alpha: 1, duration: 180, delay: 220, onComplete: () => this.tweens.add({ targets: ring, scale: 1.14, duration: 260, yoyo: true, repeat: -1 }) });
+    }
+
+    if (beat.horror) this.cameras.main.shake(beat.key === "teams" ? 320 : 160, beat.key === "teams" ? .012 : .004);
+    this.tweens.add({ targets: [next, shade, title, caption], alpha: 1, duration: beat.horror ? 240 : 520, ease: "Sine.Out" });
+    const oldImage = this.currentImage;
+    const oldShade = this.currentShade;
+    const oldTitle = this.currentTitle;
+    const oldCaption = this.currentCaption;
+    if (oldImage) this.tweens.add({ targets: [oldImage, oldShade, oldTitle, oldCaption], alpha: 0, duration: 360, onComplete: () => {
+      oldImage.destroy(); oldShade?.destroy(); oldTitle?.destroy(); oldCaption?.destroy();
+    } });
+    this.currentImage = next;
+    this.currentShade = shade;
+    this.currentTitle = title;
+    this.currentCaption = caption;
+  }
+
+  private showPostCredits() {
+    this.sound.stopAll();
+    this.children.removeAll(true);
+    const { width, height } = this.scale;
+    this.add.rectangle(width / 2, height / 2, width, height, 0x070707, 1);
+    this.add.text(width / 2, 85, "POST-CREDIT STATEMENT", { fontFamily: "Arial Black", fontSize: "20px", color: "#999" }).setOrigin(.5);
+    this.add.text(width / 2, 174, "THERAPY BILL:  $18,450.00", { fontFamily: "Courier New", fontStyle: "bold", fontSize: "35px", color: "#f4f1e8" }).setOrigin(.5);
+    this.add.text(width / 2, 236, "INSURANCE COVERED:  $47.12", { fontFamily: "Courier New", fontStyle: "bold", fontSize: "29px", color: "#e08a8a" }).setOrigin(.5);
+    this.add.line(width / 2, 296, -380, 0, 380, 0, 0x666666, 1).setLineWidth(2);
+    this.add.text(width / 2, 350, "NEW GAME+ UNLOCKED", { fontFamily: "Arial Black", fontSize: "25px", color: "#c29cdf" }).setOrigin(.5);
+    this.add.text(width / 2, 397, "GENERATIONAL TRAUMA", { fontFamily: "Arial Black", fontSize: "45px", color: "#ffffff", stroke: "#562269", strokeThickness: 8 }).setOrigin(.5);
+    this.add.text(width / 2, 468, "The real horror was the calendar invite we accepted along the way.", { fontFamily: "Georgia", fontStyle: "italic", fontSize: "20px", color: "#bdb3c2" }).setOrigin(.5);
+    const button = this.add.rectangle(width / 2, 575, 260, 58, 0x4f2859, 1).setStrokeStyle(2, 0xc89bd2, 1).setInteractive({ useHandCursor: true });
+    this.add.text(width / 2, 575, "RETURN TO MENU", { fontFamily: "Arial Black", fontSize: "16px", color: "#fff" }).setOrigin(.5);
+    button.on("pointerdown", () => this.scene.start("menu"));
+  }
+}
+
+new Phaser.Game({ type: Phaser.AUTO, parent: "game", width: 1280, height: 720, backgroundColor: "#07100f", scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH }, scene: [ChapterSelect, SwampRescue, ChapterTwoBattle, BonusHealing, ChapterThreeRescue, ChapterFourRescue, ChapterFourBonus, ChapterFiveRun, ChapterSixTrueEnding, ChapterSixEndCredits] });
