@@ -1390,6 +1390,7 @@ class ChapterFiveRun extends Phaser.Scene {
     this.load.image("chapter5-body", "assets/chapter5-body.png");
     this.load.image("chapter5-victory", "assets/chapter5-victory.png");
     this.load.image("chapter5-failure", "assets/chapter5-failure-v2.png");
+    this.load.image("chapter5-blood-squirt", "assets/blood-squirt-right.png");
     this.load.audio("chapter5-main", "assets/chapter5-main.mp3");
     this.load.audio("chapter5-winning", "assets/chapter5-winning.mp3");
     this.load.audio("chapter5-failure-music", "assets/chapter5-failure-music.mp3");
@@ -1502,7 +1503,11 @@ class ChapterFiveRun extends Phaser.Scene {
     this.mainMusic.stop();
     this.tweens.killTweensOf(this.mother);
     if (won) {
-      this.time.delayedCall(350, () => this.showEnding(true));
+      this.mother.setTexture("chapter5-mother").setDisplaySize(335, 223).setY(500).setAngle(0);
+      this.tweens.add({ targets: this.mother, x: 1450, y: 492, duration: 1650, ease: "Sine.In", onUpdate: () => this.mother.setAngle(Math.sin(this.time.now / 70) * 2.4) });
+      this.tweens.add({ targets: this.fawn, x: 1640, y: 490, duration: 1650, ease: "Sine.In", onUpdate: () => this.fawn.setAngle(Math.sin(this.time.now / 62 + 1) * 3) });
+      this.time.delayedCall(1050, () => this.cameras.main.fadeOut(600, 0, 0, 0));
+      this.time.delayedCall(1700, () => { this.showEnding(true); this.cameras.main.fadeIn(700, 0, 0, 0); });
     } else {
       this.sound.play("chapter5-shotgun", { volume: .98 });
       this.cameras.main.flash(140, 255, 245, 225, false);
@@ -1510,6 +1515,14 @@ class ChapterFiveRun extends Phaser.Scene {
       const tracer = this.add.rectangle(1370, 350, 300, 6, 0xffefad, 1).setDepth(90).setAngle(-7);
       const tracerGlow = this.add.rectangle(1370, 350, 380, 18, 0xffd15c, .28).setDepth(89).setAngle(-7);
       this.tweens.add({ targets: [tracer, tracerGlow], x: -220, y: 505, duration: 210, ease: "Power3", onComplete: () => { tracer.destroy(); tracerGlow.destroy(); } });
+      const blood = this.add.image(this.mother.x + 55, this.mother.y - 20, "chapter5-blood-squirt").setDisplaySize(260, 180).setDepth(94).setAngle(-12).setAlpha(.95);
+      this.tweens.add({ targets: blood, x: blood.x - 85, y: blood.y - 35, scaleX: 1.45, scaleY: 1.45, alpha: 0, duration: 720, ease: "Power2", onComplete: () => blood.destroy() });
+      const redFlash = this.add.rectangle(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, 0x8f0011, .34).setDepth(93).setAlpha(0);
+      this.tweens.add({ targets: redFlash, alpha: .38, duration: 90, yoyo: true, hold: 120, onComplete: () => redFlash.destroy() });
+      for (let i = 0; i < 24; i++) {
+        const drop = this.add.circle(this.mother.x + 20, this.mother.y - 5, Phaser.Math.Between(3, 11), i % 4 === 0 ? 0x5b0009 : 0xb30018, Phaser.Math.FloatBetween(.65, 1)).setDepth(95);
+        this.tweens.add({ targets: drop, x: drop.x + Phaser.Math.Between(-260, 220), y: drop.y + Phaser.Math.Between(-190, 150), scale: Phaser.Math.FloatBetween(.4, 1.7), alpha: 0, duration: Phaser.Math.Between(420, 900), ease: "Power2", onComplete: () => drop.destroy() });
+      }
       for (let i = 0; i < 18; i++) {
         const impact = this.add.circle(560, 475, Phaser.Math.Between(2, 6), 0xf4fbff, Phaser.Math.FloatBetween(.45, 1)).setDepth(91);
         this.tweens.add({ targets: impact, x: impact.x + Phaser.Math.Between(-80, 100), y: impact.y + Phaser.Math.Between(-85, 45), alpha: 0, duration: Phaser.Math.Between(280, 600), onComplete: () => impact.destroy() });
