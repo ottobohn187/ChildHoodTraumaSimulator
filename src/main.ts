@@ -1389,7 +1389,7 @@ class ChapterFiveRun extends Phaser.Scene {
     this.load.image("chapter5-log", "assets/chapter5-log.png");
     this.load.image("chapter5-body", "assets/chapter5-body.png");
     this.load.image("chapter5-victory", "assets/chapter5-victory.png");
-    this.load.image("chapter5-failure", "assets/chapter5-failure.png");
+    this.load.image("chapter5-failure", "assets/chapter5-failure-v2.png");
     this.load.audio("chapter5-main", "assets/chapter5-main.mp3");
     this.load.audio("chapter5-winning", "assets/chapter5-winning.mp3");
     this.load.audio("chapter5-failure-music", "assets/chapter5-failure-music.mp3");
@@ -1488,7 +1488,7 @@ class ChapterFiveRun extends Phaser.Scene {
     const isBody = this.obstaclesSpawned === 4;
     const log = this.add.image(first ? 900 : 1420, isBody ? 505 : 530, isBody ? "chapter5-body" : "chapter5-log").setDepth(9).setData("passed", false).setData("phase", Phaser.Math.FloatBetween(0, Math.PI * 2)).setData("kind", isBody ? "body" : "log");
     if (isBody) {
-      log.setDisplaySize(430, 215);
+      log.setDisplaySize(430, 215).setTint(0x8fa6ba).setAlpha(.78);
     } else {
       log.setDisplaySize(460, 130);
     }
@@ -1527,7 +1527,7 @@ class ChapterFiveRun extends Phaser.Scene {
     else this.failureMusic.play({ loop: true });
     this.add.image(width / 2, height / 2, won ? "chapter5-victory" : "chapter5-failure").setDisplaySize(width, height).setDepth(40);
     if (!won) {
-      this.add.image(650, 490, "chapter5-body").setDisplaySize(430, 215).setAngle(-5).setDepth(41);
+      this.add.image(650, 490, "chapter5-body").setDisplaySize(430, 215).setTint(0x7d91a8).setAlpha(.68).setAngle(-5).setDepth(41);
     }
     this.add.rectangle(width / 2, 72, width, 144, 0x020508, .72).setDepth(41);
     this.add.rectangle(width / 2, height - 91, width, 182, 0x020508, .72).setDepth(41);
