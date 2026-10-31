@@ -1143,9 +1143,9 @@ class ChapterFourBonus extends Phaser.Scene {
 
     items.push(this.add.rectangle(width / 2, 64, width, 128, 0x05070b, .82));
     items.push(this.add.rectangle(width / 2, 580, 1060, 218, 0x07090d, .82).setStrokeStyle(2, 0xe2b870, .7));
-    items.push(this.add.text(34, 18, "AFTER CHAPTER 4  •  THE HEALING MOMENT", { fontFamily: "Arial Black", fontSize: "17px", color: "#e8bf7d", stroke: "#000", strokeThickness: 4 }));
-    items.push(this.add.text(34, 48, `${this.step + 1}. ${title}`, { fontFamily: "Arial Black", fontSize: "34px", color: "#fff3d4", stroke: "#000", strokeThickness: 7 }));
-    const countdown = this.add.text(width - 34, 30, "10", { fontFamily: "Arial Black", fontSize: "43px", color: "#f2c57d", stroke: "#000", strokeThickness: 6 }).setOrigin(1, 0);
+    items.push(this.add.text(44, 34, "AFTER CHAPTER 4  •  THE HEALING MOMENT", { fontFamily: "Arial Black", fontSize: "17px", color: "#e8bf7d", stroke: "#000", strokeThickness: 4 }));
+    items.push(this.add.text(44, 65, `${this.step + 1}. ${title}`, { fontFamily: "Arial Black", fontSize: "34px", color: "#fff3d4", stroke: "#000", strokeThickness: 7 }));
+    const countdown = this.add.text(width - 44, 46, "10", { fontFamily: "Arial Black", fontSize: "43px", color: "#f2c57d", stroke: "#000", strokeThickness: 6 }).setOrigin(1, 0);
     items.push(countdown);
     items.push(this.add.text(width / 2, 530, quote, { fontFamily: "Georgia", fontStyle: "italic", fontSize: "28px", align: "center", color: "#fff7e7", stroke: "#000", strokeThickness: 5, wordWrap: { width: 900 } }).setOrigin(.5, 0));
     const isLast = this.step === CHAPTER_FOUR_HEALING_MOMENTS.length - 1;
@@ -1260,9 +1260,9 @@ class BonusHealing extends Phaser.Scene {
     const intro = scene.introImage ? this.add.image(width / 2, height / 2, scene.introImage).setDisplaySize(width, height).setAlpha(0) : undefined;
     const top = this.add.rectangle(width / 2, 66, width, 132, 0x090806, .72);
     const bottom = this.add.rectangle(width / 2, height - 101, width, 202, 0x090806, .74);
-    const kicker = this.add.text(30, 18, scene.title, { fontFamily: "Arial Black", fontSize: "25px", color: "#fff0cb", stroke: "#000", strokeThickness: 6 });
-    const count = this.add.text(width - 28, 22, `${this.step + 1} / ${scenes.length}`, { fontFamily: "Arial Black", fontSize: "17px", color: "#d8c49b" }).setOrigin(1, 0);
-    const countdown = this.add.text(width - 28, 59, "NEXT MEMORY IN 10", { fontFamily: "Arial Black", fontSize: "18px", color: "#fff0cb", stroke: "#000", strokeThickness: 5 }).setOrigin(1, 0);
+    const kicker = this.add.text(44, 38, scene.title, { fontFamily: "Arial Black", fontSize: "25px", color: "#fff0cb", stroke: "#000", strokeThickness: 6 });
+    const count = this.add.text(width - 44, 38, `${this.step + 1} / ${scenes.length}`, { fontFamily: "Arial Black", fontSize: "17px", color: "#d8c49b" }).setOrigin(1, 0);
+    const countdown = this.add.text(width - 44, 74, "NEXT MEMORY IN 10", { fontFamily: "Arial Black", fontSize: "18px", color: "#fff0cb", stroke: "#000", strokeThickness: 5 }).setOrigin(1, 0);
     const quote = this.add.text(width / 2, height - 150, scene.quote, { fontFamily: "Georgia", fontStyle: "italic", fontSize: "23px", color: "#fff4dc", stroke: "#000", strokeThickness: 5, align: "center", wordWrap: { width: 1100 } }).setOrigin(.5);
     const final = this.step === scenes.length - 1;
     const button = this.add.rectangle(width / 2, height - 55, final ? 370 : 240, 56, 0x6d2a24, 1).setStrokeStyle(3, 0xffdda0, 1).setInteractive({ useHandCursor: true });
