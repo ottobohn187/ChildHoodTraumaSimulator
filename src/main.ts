@@ -36,6 +36,7 @@ class ChapterSelect extends Phaser.Scene {
   private chapterThreeHealed = false;
   private chapterFourHealed = false;
   private bonusDone = false;
+  private menuMusic?: Phaser.Sound.BaseSound;
 
   constructor() { super("menu"); }
 
@@ -45,6 +46,7 @@ class ChapterSelect extends Phaser.Scene {
     this.load.image("artax", "assets/artax-separated-v2.png");
     this.load.image("chapter2-arena", "assets/chapter2-volcanic-arena.png");
     this.load.image("menu-header", "assets/menu-header-reference.png");
+    this.load.audio("menu-system-idle", "assets/menu-system-idle.mp3");
   }
 
   create() {
@@ -63,6 +65,10 @@ class ChapterSelect extends Phaser.Scene {
     this.makeChapterRail();
     this.makeFinalBossShortcut(width);
     this.makeCreditsDebugShortcut(width);
+
+    this.menuMusic = this.sound.add("menu-system-idle", { volume: .38, loop: true });
+    this.menuMusic.play();
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.menuMusic?.stop());
 
     const profile = this.add.text(width - 38, height - 24, this.gender ? `PROFILE: ${this.gender.toUpperCase()}  •  CHANGE` : "CHOOSE YOUR PROFILE", {
       fontFamily: "Arial Black", fontSize: "12px", color: "#d7c9aa",
