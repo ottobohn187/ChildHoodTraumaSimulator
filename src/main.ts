@@ -47,6 +47,7 @@ class ChapterSelect extends Phaser.Scene {
     this.makeChapterCard(36, 174, 748, 390);
     this.makeChapterTwoCard(808, 174, 436, 390);
     this.makeChapterRail();
+    this.makeFinalBossShortcut(width);
 
     const profile = this.add.text(width - 38, height - 24, this.gender ? `PROFILE: ${this.gender.toUpperCase()}  •  CHANGE` : "CHOOSE YOUR PROFILE", {
       fontFamily: "Arial Black", fontSize: "12px", color: "#d7c9aa",
@@ -111,6 +112,14 @@ class ChapterSelect extends Phaser.Scene {
         rail.on("pointerdown", () => this.gender ? this.scene.start(chapterFive ? "chapter5" : chapterFourBonus ? "chapter4bonus" : chapterFour ? "chapter4" : "chapter3") : this.showGenderPrompt());
       }
     });
+  }
+
+  private makeFinalBossShortcut(width: number) {
+    const button = this.add.rectangle(width - 160, 548, 276, 38, 0x5b244d, .98).setStrokeStyle(2, 0xef9bdb, 1).setInteractive({ useHandCursor: true });
+    this.add.text(width - 160, 548, "SECRET FINAL BOSS: YOU", { fontFamily: "Arial Black", fontSize: "12px", color: "#ffe4f7", stroke: "#1b0717", strokeThickness: 3 }).setOrigin(.5);
+    button.on("pointerover", () => button.setFillStyle(0x87366f, 1));
+    button.on("pointerout", () => button.setFillStyle(0x5b244d, .98));
+    button.on("pointerdown", () => this.gender ? this.scene.start("chapter6") : this.showGenderPrompt());
   }
 
   private showGenderPrompt() {
@@ -1526,4 +1535,152 @@ class ChapterFiveRun extends Phaser.Scene {
   }
 }
 
-new Phaser.Game({ type: Phaser.AUTO, parent: "game", width: 1280, height: 720, backgroundColor: "#07100f", scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH }, scene: [ChapterSelect, SwampRescue, ChapterTwoBattle, BonusHealing, ChapterThreeRescue, ChapterFourRescue, ChapterFourBonus, ChapterFiveRun] });
+class ChapterSixTrueEnding extends Phaser.Scene {
+  private panel?: Phaser.GameObjects.Container;
+  private weapon?: Phaser.GameObjects.Container;
+  private music!: Phaser.Sound.BaseSound;
+
+  constructor() { super("chapter6"); }
+
+  preload() {
+    this.load.image("chapter6-bedroom", "assets/chapter6-bedroom.png");
+    this.load.audio("chapter6-last-scene", "assets/chapter6-last-scene.mp3");
+  }
+
+  create() {
+    const { width, height } = this.scale;
+    this.add.image(width / 2, height / 2, "chapter6-bedroom").setDisplaySize(width, height);
+    this.add.rectangle(width / 2, height / 2, width, height, 0x100817, .25);
+    for (let i = 0; i < 34; i++) {
+      const rain = this.add.rectangle(Phaser.Math.Between(0, width), Phaser.Math.Between(0, height), 2, Phaser.Math.Between(18, 50), 0xb7ccdf, Phaser.Math.FloatBetween(.08, .28)).setAngle(12);
+      this.tweens.add({ targets: rain, x: rain.x + 170, y: height + 70, duration: Phaser.Math.Between(900, 1800), delay: Phaser.Math.Between(0, 1200), repeat: -1 });
+    }
+    this.music = this.sound.add("chapter6-last-scene", { volume: .58, loop: true });
+    this.music.play({ seek: 20 });
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.sound.stopAll());
+    this.showOpening();
+  }
+
+  private clearPanel() { this.panel?.destroy(true); }
+
+  private showOpening() {
+    this.clearPanel();
+    const { width, height } = this.scale;
+    const items: Phaser.GameObjects.GameObject[] = [];
+    items.push(this.add.rectangle(width / 2, 62, width, 124, 0x05030a, .84));
+    items.push(this.add.text(28, 15, "CHAPTER 6  •  SECRET TRUE ENDING", { fontFamily: "Arial Black", fontSize: "16px", color: "#e4a8d7", stroke: "#000", strokeThickness: 4 }));
+    items.push(this.add.text(28, 42, "FINAL BOSS: YOU WERE JUST A KID", { fontFamily: "Arial Black", fontSize: "34px", color: "#fff0fb", stroke: "#180513", strokeThickness: 7 }));
+    items.push(this.add.rectangle(width / 2, height - 112, 900, 165, 0x08050c, .88).setStrokeStyle(2, 0xc979b5, .8));
+    items.push(this.add.text(width / 2, height - 157, "Your childhood bedroom, 1994. Rain outside. The CRT whispers static.", { fontFamily: "Georgia", fontSize: "20px", color: "#d9c7d8" }).setOrigin(.5));
+    items.push(this.add.text(width / 2, height - 116, "Your eight-year-old self looks up.", { fontFamily: "Georgia", fontStyle: "italic", fontSize: "22px", color: "#f4dbea" }).setOrigin(.5));
+    items.push(this.add.text(width / 2, height - 79, "“Did we turn out okay?”", { fontFamily: "Georgia", fontStyle: "bold", fontSize: "28px", color: "#ffffff", stroke: "#000", strokeThickness: 4 }).setOrigin(.5));
+    const button = this.add.rectangle(width / 2, height - 28, 280, 48, 0x78345f, 1).setStrokeStyle(2, 0xf2b5df, 1).setInteractive({ useHandCursor: true });
+    items.push(button, this.add.text(width / 2, height - 28, "ENTER THE ROOM", { fontFamily: "Arial Black", fontSize: "16px", color: "#fff" }).setOrigin(.5));
+    button.on("pointerdown", () => this.showBoss());
+    this.panel = this.add.container(0, 0, items).setDepth(20);
+  }
+
+  private showBoss() {
+    this.clearPanel();
+    const { width, height } = this.scale;
+    const items: Phaser.GameObjects.GameObject[] = [];
+    items.push(this.add.rectangle(width / 2, 74, width, 148, 0x05030a, .9));
+    items.push(this.add.text(28, 14, "FINAL BOSS", { fontFamily: "Arial Black", fontSize: "15px", color: "#d58abb" }));
+    items.push(this.add.text(28, 39, "INNER CHILD", { fontFamily: "Arial Black", fontSize: "35px", color: "#fff" }));
+    items.push(this.add.rectangle(470, 107, 830, 22, 0x1a0b18, 1).setOrigin(0, .5).setStrokeStyle(2, 0xe7a4d4, 1));
+    items.push(this.add.rectangle(472, 107, 826, 16, 0xc9529c, 1).setOrigin(0, .5));
+    items.push(this.add.text(width - 30, 40, "HP 100 / 100", { fontFamily: "Arial Black", fontSize: "22px", color: "#ffdff5" }).setOrigin(1, 0));
+    const question = this.add.text(width / 2, 455, "“Why didn't anybody come save me?”", { fontFamily: "Georgia", fontStyle: "italic", fontSize: "31px", color: "#ffffff", stroke: "#10020c", strokeThickness: 6 }).setOrigin(.5);
+    items.push(question);
+    const responses = ["I tried my best.", "Because nobody knew how.", "I'm here now.", "Get over it, kid."];
+    responses.forEach((label, i) => {
+      const x = i % 2 === 0 ? 330 : 950;
+      const y = i < 2 ? 535 : 607;
+      const choice = this.add.rectangle(x, y, 540, 54, i === 3 ? 0x5b2028 : 0x382039, .98).setStrokeStyle(2, i === 3 ? 0xd76969 : 0xd39ac4, 1).setInteractive({ useHandCursor: true });
+      const copy = this.add.text(x, y, label, { fontFamily: "Arial Black", fontSize: "17px", color: "#fff2fa" }).setOrigin(.5);
+      choice.on("pointerdown", () => this.answer(i, question));
+      items.push(choice, copy);
+    });
+    this.weapon = this.makeWeapon();
+    items.push(this.weapon);
+    this.panel = this.add.container(0, 0, items).setDepth(20);
+  }
+
+  private makeWeapon() {
+    const g = this.add.graphics();
+    g.fillStyle(0x17121b, 1).fillRoundedRect(-14, -170, 28, 260, 8);
+    g.fillStyle(0xa9a2ae, 1).fillTriangle(0, -235, -18, -165, 18, -165);
+    g.fillStyle(0x5e354f, 1).fillRoundedRect(-36, 72, 72, 26, 8);
+    const label = this.add.text(0, 122, "THE WEAPON\nYOU BROUGHT IN", { fontFamily: "Arial Black", fontSize: "10px", align: "center", color: "#d7b4ce", stroke: "#000", strokeThickness: 3 }).setOrigin(.5);
+    return this.add.container(1160, 540, [g, label]).setAngle(22);
+  }
+
+  private answer(index: number, question: Phaser.GameObjects.Text) {
+    if (index === 0) {
+      question.setText("“I know. You were trying to survive too.”");
+    } else if (index === 1) {
+      question.setText("“I still waited. I thought it was my fault.”");
+    } else if (index === 3) {
+      question.setText("HE DOESN'T ATTACK. HE JUST FLINCHES.").setColor("#ff9caa");
+      this.cameras.main.shake(260, .012);
+      this.tweens.add({ targets: this.weapon, scale: 1.18, duration: 100, yoyo: true });
+    } else {
+      this.offerPeace();
+    }
+  }
+
+  private offerPeace() {
+    this.clearPanel();
+    const { width, height } = this.scale;
+    const items: Phaser.GameObjects.GameObject[] = [];
+    items.push(this.add.rectangle(width / 2, height - 128, 920, 190, 0x07040a, .9).setStrokeStyle(2, 0xe1a8d1, .8));
+    items.push(this.add.text(width / 2, height - 178, "“Then stay.”", { fontFamily: "Georgia", fontStyle: "italic", fontSize: "35px", color: "#ffffff", stroke: "#000", strokeThickness: 5 }).setOrigin(.5));
+    items.push(this.add.text(width / 2, height - 135, "The child has no attack animation. He never did.", { fontFamily: "Georgia", fontSize: "20px", color: "#d7c4d3" }).setOrigin(.5));
+    const button = this.add.rectangle(width / 2, height - 74, 370, 62, 0x386159, 1).setStrokeStyle(3, 0xbfe9da, 1).setInteractive({ useHandCursor: true });
+    items.push(button, this.add.text(width / 2, height - 74, "PUT IT DOWN • SIT BESIDE HIM", { fontFamily: "Arial Black", fontSize: "16px", color: "#effff9" }).setOrigin(.5));
+    const keep = this.add.text(width / 2, height - 27, "Keep fighting", { fontFamily: "Arial Black", fontSize: "12px", color: "#8e7187" }).setOrigin(.5).setInteractive({ useHandCursor: true });
+    items.push(keep);
+    button.on("pointerdown", () => this.breakCycle());
+    keep.on("pointerdown", () => this.showBoss());
+    this.panel = this.add.container(0, 0, items).setDepth(25);
+  }
+
+  private breakCycle() {
+    this.clearPanel();
+    const { width, height } = this.scale;
+    const lowered = this.makeWeapon().setDepth(28);
+    this.tweens.add({ targets: lowered, y: 860, angle: 85, alpha: 0, duration: 900, ease: "Power2" });
+    const fade = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 1).setDepth(30).setAlpha(0);
+    this.add.text(width / 2, height - 70, "You sit down beside the child.", { fontFamily: "Georgia", fontStyle: "italic", fontSize: "26px", color: "#ffffff", stroke: "#000", strokeThickness: 5 }).setOrigin(.5).setDepth(29);
+    this.tweens.add({ targets: fade, alpha: 1, duration: 2400, delay: 700, onComplete: () => this.showAchievement() });
+  }
+
+  private showAchievement() {
+    this.children.removeAll(true);
+    const { width, height } = this.scale;
+    this.add.rectangle(width / 2, height / 2, width, height, 0x020203, 1);
+    this.add.text(width / 2, 160, "ACHIEVEMENT UNLOCKED", { fontFamily: "Arial Black", fontSize: "21px", color: "#c692ef" }).setOrigin(.5);
+    this.add.text(width / 2, 210, "BROKE THE CYCLE", { fontFamily: "Arial Black", fontSize: "58px", color: "#ffffff", stroke: "#48195b", strokeThickness: 9 }).setOrigin(.5);
+    this.add.text(width / 2, 320, "“You couldn't save your childhood.\nBut you can stop fighting it.”", { fontFamily: "Georgia", fontStyle: "italic", fontSize: "30px", align: "center", color: "#e9dcea", lineSpacing: 12 }).setOrigin(.5);
+    const button = this.add.rectangle(width / 2, 485, 280, 58, 0x5d2c66, 1).setStrokeStyle(2, 0xd9a9df, 1).setInteractive({ useHandCursor: true });
+    this.add.text(width / 2, 485, "POST-CREDITS", { fontFamily: "Arial Black", fontSize: "17px", color: "#fff" }).setOrigin(.5);
+    button.on("pointerdown", () => this.showPostCredits());
+  }
+
+  private showPostCredits() {
+    this.children.removeAll(true);
+    const { width, height } = this.scale;
+    this.add.rectangle(width / 2, height / 2, width, height, 0x070707, 1);
+    this.add.text(width / 2, 125, "POST-CREDIT STATEMENT", { fontFamily: "Arial Black", fontSize: "20px", color: "#999" }).setOrigin(.5);
+    this.add.text(width / 2, 218, "THERAPY BILL:  $18,450.00", { fontFamily: "Courier New", fontStyle: "bold", fontSize: "35px", color: "#f4f1e8" }).setOrigin(.5);
+    this.add.text(width / 2, 280, "INSURANCE COVERED:  $47.12", { fontFamily: "Courier New", fontStyle: "bold", fontSize: "29px", color: "#e08a8a" }).setOrigin(.5);
+    this.add.line(width / 2, 340, -380, 0, 380, 0, 0x666666, 1).setLineWidth(2);
+    this.add.text(width / 2, 397, "NEW GAME+ UNLOCKED", { fontFamily: "Arial Black", fontSize: "25px", color: "#c29cdf" }).setOrigin(.5);
+    this.add.text(width / 2, 444, "GENERATIONAL TRAUMA", { fontFamily: "Arial Black", fontSize: "45px", color: "#ffffff", stroke: "#562269", strokeThickness: 8 }).setOrigin(.5);
+    const button = this.add.rectangle(width / 2, 575, 260, 58, 0x4f2859, 1).setStrokeStyle(2, 0xc89bd2, 1).setInteractive({ useHandCursor: true });
+    this.add.text(width / 2, 575, "RETURN TO MENU", { fontFamily: "Arial Black", fontSize: "16px", color: "#fff" }).setOrigin(.5);
+    button.on("pointerdown", () => this.scene.start("menu"));
+  }
+}
+
+new Phaser.Game({ type: Phaser.AUTO, parent: "game", width: 1280, height: 720, backgroundColor: "#07100f", scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH }, scene: [ChapterSelect, SwampRescue, ChapterTwoBattle, BonusHealing, ChapterThreeRescue, ChapterFourRescue, ChapterFourBonus, ChapterFiveRun, ChapterSixTrueEnding] });
