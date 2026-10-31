@@ -24,7 +24,10 @@ const CHAPTER_SIX_CREDIT_BEATS = [
   { key: "divorce", title: "DIVORCE", caption: "Two homes. One empty chair.", horror: true },
   { key: "bad-parent", title: "THE CYCLE KNOCKS", caption: "What if you become the parent you feared?", horror: true },
   { key: "job", title: "YOUR DREAM JOB", caption: "The dream was apparently fluorescent.", horror: true },
-  { key: "teams", title: "MICROSOFT TEAMS", caption: "INCOMING CALL", horror: true }
+  { key: "teams", title: "MICROSOFT TEAMS", caption: "INCOMING CALL", horror: true },
+  { key: "fort", title: "WE MADE HOME SAFE", caption: "The rain stays outside. You stay together.", horror: false },
+  { key: "ordinary-morning", title: "NOTHING BAD HAPPENED", caption: "Just an ordinary morning. Finally.", horror: false },
+  { key: "homeownership", title: "HOMEOWNERSHIP", caption: "The ceiling has become a waterfall.", horror: true }
 ];
 
 class ChapterSelect extends Phaser.Scene {
@@ -147,26 +150,26 @@ class ChapterSelect extends Phaser.Scene {
     const overlay = this.add.container(0, 0).setDepth(80);
     const items: Phaser.GameObjects.GameObject[] = [];
     items.push(this.add.rectangle(width / 2, height / 2, width, height, 0x010306, .91).setInteractive());
-    items.push(this.add.rectangle(width / 2, height / 2, 1080, 620, 0x0b1117, .99).setStrokeStyle(3, 0x75cce8, .9));
+    items.push(this.add.rectangle(width / 2, height / 2, 1220, 620, 0x0b1117, .99).setStrokeStyle(3, 0x75cce8, .9));
     items.push(this.add.text(width / 2, 64, "CHAPTER 6 END-CREDIT DEBUG GALLERY", { fontFamily: "Arial Black", fontSize: "27px", color: "#e7f9ff", stroke: "#000", strokeThickness: 6 }).setOrigin(.5));
     items.push(this.add.text(width / 2, 98, "Open any shot instantly, or play the complete timed sequence.", { fontFamily: "Georgia", fontSize: "17px", color: "#a9c7d2" }).setOrigin(.5));
     CHAPTER_SIX_CREDIT_BEATS.forEach((beat, i) => {
-      const col = i % 3;
-      const row = Math.floor(i / 3);
-      const x = 295 + col * 345;
-      const y = 170 + row * 105;
-      const card = this.add.rectangle(x, y, 310, 76, beat.horror ? 0x40151c : 0x233b35, .98).setStrokeStyle(2, beat.horror ? 0xd56670 : 0x8dc9b3, 1).setInteractive({ useHandCursor: true });
-      const number = this.add.text(x - 135, y - 25, `${i + 1}`.padStart(2, "0"), { fontFamily: "Arial Black", fontSize: "12px", color: beat.horror ? "#ff98a0" : "#aadcca" });
-      const title = this.add.text(x, y - 8, beat.title, { fontFamily: "Arial Black", fontSize: "14px", color: "#ffffff", align: "center", wordWrap: { width: 270 } }).setOrigin(.5);
+      const col = i % 4;
+      const row = Math.floor(i / 4);
+      const x = 180 + col * 305;
+      const y = 175 + row * 112;
+      const card = this.add.rectangle(x, y, 280, 78, beat.horror ? 0x40151c : 0x233b35, .98).setStrokeStyle(2, beat.horror ? 0xd56670 : 0x8dc9b3, 1).setInteractive({ useHandCursor: true });
+      const number = this.add.text(x - 121, y - 26, `${i + 1}`.padStart(2, "0"), { fontFamily: "Arial Black", fontSize: "12px", color: beat.horror ? "#ff98a0" : "#aadcca" });
+      const title = this.add.text(x, y - 8, beat.title, { fontFamily: "Arial Black", fontSize: "13px", color: "#ffffff", align: "center", wordWrap: { width: 245 } }).setOrigin(.5);
       const mode = this.add.text(x, y + 20, beat.horror ? "ORGAN HORROR" : "SINGING / HEALING", { fontFamily: "Arial Black", fontSize: "9px", color: beat.horror ? "#e87982" : "#82bba6" }).setOrigin(.5);
       card.on("pointerdown", () => this.scene.start("chapter6credits", { debugBeat: i }));
       items.push(card, number, title, mode);
     });
-    const full = this.add.rectangle(width / 2 - 180, 560, 330, 56, 0x5d2c66, 1).setStrokeStyle(2, 0xd9a9df, 1).setInteractive({ useHandCursor: true });
-    const boss = this.add.rectangle(width / 2 + 180, 560, 330, 56, 0x4b2b28, 1).setStrokeStyle(2, 0xe1a38e, 1).setInteractive({ useHandCursor: true });
-    const close = this.add.text(width / 2, 632, "CLOSE DEBUG GALLERY", { fontFamily: "Arial Black", fontSize: "13px", color: "#93a8b0" }).setOrigin(.5).setInteractive({ useHandCursor: true });
-    items.push(full, this.add.text(width / 2 - 180, 560, "PLAY FULL END CREDITS", { fontFamily: "Arial Black", fontSize: "14px", color: "#fff" }).setOrigin(.5));
-    items.push(boss, this.add.text(width / 2 + 180, 560, "START FINAL BOSS", { fontFamily: "Arial Black", fontSize: "14px", color: "#fff" }).setOrigin(.5), close);
+    const full = this.add.rectangle(width / 2 - 180, 535, 330, 54, 0x5d2c66, 1).setStrokeStyle(2, 0xd9a9df, 1).setInteractive({ useHandCursor: true });
+    const boss = this.add.rectangle(width / 2 + 180, 535, 330, 54, 0x4b2b28, 1).setStrokeStyle(2, 0xe1a38e, 1).setInteractive({ useHandCursor: true });
+    const close = this.add.text(width / 2, 610, "CLOSE DEBUG GALLERY", { fontFamily: "Arial Black", fontSize: "13px", color: "#93a8b0" }).setOrigin(.5).setInteractive({ useHandCursor: true });
+    items.push(full, this.add.text(width / 2 - 180, 535, "PLAY FULL END CREDITS", { fontFamily: "Arial Black", fontSize: "14px", color: "#fff" }).setOrigin(.5));
+    items.push(boss, this.add.text(width / 2 + 180, 535, "START FINAL BOSS", { fontFamily: "Arial Black", fontSize: "14px", color: "#fff" }).setOrigin(.5), close);
     full.on("pointerdown", () => this.scene.start("chapter6credits"));
     boss.on("pointerdown", () => this.scene.start("chapter6"));
     close.on("pointerdown", () => overlay.destroy(true));
@@ -1821,6 +1824,7 @@ class ChapterSixEndCredits extends Phaser.Scene {
   preload() {
     const images = ["healing-room", "bike", "parent", "porch", "anxiety", "divorce", "bad-parent", "job", "teams"];
     images.forEach((name) => this.load.image(`chapter6-credits-${name}`, `assets/chapter6-credits-${name}.png`));
+    ["fort", "ordinary-morning", "homeownership"].forEach((name) => this.load.image(`chapter6-credits-${name}`, `assets/chapter6-credits-${name}.jpg`));
     this.load.audio("chapter6-end-credits", "assets/chapter6-end-credits.mp3");
     this.load.audio("chapter6-teams-call", "assets/chapter6-teams-call.mp3");
   }
@@ -1845,9 +1849,9 @@ class ChapterSixEndCredits extends Phaser.Scene {
       { at: 10360, beat: 6 },   // organ / bass
       { at: 12900, beat: 3 },   // vocal
       { at: 14340, beat: 7 },   // organ / bass
-      { at: 16660, beat: 0 },   // vocal
-      { at: 18320, beat: 4 },   // organ / bass
-      { at: 20680, beat: 3 },   // vocal
+      { at: 16660, beat: 9 },   // vocal
+      { at: 18320, beat: 11 },  // organ / bass
+      { at: 20680, beat: 10 },  // vocal
       { at: 22360, beat: 8 },   // final organ / bass + Teams call
     ];
     musicalSequence.forEach(({ at, beat }) => this.time.delayedCall(at, () => this.showBeat(CHAPTER_SIX_CREDIT_BEATS[beat])));
