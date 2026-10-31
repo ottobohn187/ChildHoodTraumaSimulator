@@ -15,8 +15,9 @@ const BONUS_DONE_KEY = "trauma-bonus-done";
 const CHAPTER_FOUR_BONUS_DONE_KEY = "trauma-chapter-4-bonus-done";
 const CHAPTER_FIVE_HEALED_KEY = "trauma-chapter-5-healed";
 const CHAPTER_SIX_COMPLETE_KEY = "trauma-chapter-6-complete";
+type TraumaRadioTrack = { title: string; chapter: string; file: string; artist?: string; album?: string };
 const TRAUMA_RADIO_TRACKS = [
-  { title: "System Idle", chapter: "Main Menu", file: "assets/menu-system-idle.mp3" },
+  { title: "System Idle", chapter: "Main Menu", file: "assets/menu-system-idle.mp3", artist: "Net Gainz", album: "Cyberspace Grind" },
   { title: "Artax and the Swamp of Sadness", chapter: "Chapter 1", file: "assets/chapter-1-cover.mp3" },
   { title: "The NeverEnding Story Theme", chapter: "Chapter 1 • Healed", file: "assets/neverending-theme-cover.mp3" },
   { title: "The Fight She Finishes", chapter: "Chapter 2", file: "assets/chapter2-fight-cover.mp3" },
@@ -30,7 +31,7 @@ const TRAUMA_RADIO_TRACKS = [
   { title: "I Bring You a Song", chapter: "Chapter 5 • Healed", file: "assets/chapter5-winning.mp3" },
   { title: "You Were Just a Kid", chapter: "Chapter 6", file: "assets/chapter6-last-scene.mp3" },
   { title: "Adulthood Unlocked", chapter: "End Credits", file: "assets/chapter6-end-credits.mp3" },
-] as const;
+] as const satisfies readonly TraumaRadioTrack[];
 
 type RadioWakeLock = { release: () => Promise<void> };
 let traumaRadioAudio: HTMLAudioElement | null = null;
@@ -67,8 +68,8 @@ function updateTraumaRadioMediaSession() {
   const track = TRAUMA_RADIO_TRACKS[traumaRadioIndex];
   navigator.mediaSession.metadata = new MediaMetadata({
     title: track.title,
-    artist: "Childhood Trauma Simulator",
-    album: `Trauma Radio • ${track.chapter}`,
+    artist: "artist" in track ? track.artist : "Childhood Trauma Simulator",
+    album: "album" in track ? track.album : `Trauma Radio • ${track.chapter}`,
     artwork: [{ src: new URL("assets/chapter6-bedroom.png", window.location.href).href, sizes: "1280x720", type: "image/png" }],
   });
   navigator.mediaSession.playbackState = traumaRadioAudio?.paused ? "paused" : "playing";
@@ -2233,7 +2234,10 @@ class TraumaRadio extends Phaser.Scene {
     const track = TRAUMA_RADIO_TRACKS[traumaRadioIndex];
     const playing = traumaRadioAudio && !traumaRadioAudio.paused;
     this.trackTitle.setText(track.title);
-    this.chapterTitle.setText(track.chapter.toUpperCase());
+    const credit = "artist" in track && "album" in track
+      ? `${track.chapter}  •  ${track.artist}  •  ${track.album}`
+      : track.chapter;
+    this.chapterTitle.setText(credit.toUpperCase());
     this.playLabel.setText(playing ? "PAUSE" : "PLAY");
     this.status.setText(`${playing ? "▶ STREAMING" : "Ⅱ PAUSED"}   •   TRACK ${traumaRadioIndex + 1} OF ${TRAUMA_RADIO_TRACKS.length}   •   BACKGROUND MUSIC ONLY`);
     const nextTracks = [1, 2, 3].map((offset) => TRAUMA_RADIO_TRACKS[(traumaRadioIndex + offset) % TRAUMA_RADIO_TRACKS.length].title);
