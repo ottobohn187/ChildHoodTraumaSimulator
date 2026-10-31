@@ -1354,6 +1354,7 @@ class SwampRescue extends Phaser.Scene {
 
 class ChapterFiveRun extends Phaser.Scene {
   private mother!: Phaser.GameObjects.Image;
+  private fawn!: Phaser.GameObjects.Image;
   private logs: Phaser.GameObjects.Image[] = [];
   private timerText!: Phaser.GameObjects.Text;
   private jumpText!: Phaser.GameObjects.Text;
@@ -1372,6 +1373,8 @@ class ChapterFiveRun extends Phaser.Scene {
   preload() {
     this.load.image("chapter5-forest", "assets/chapter5-forest.png");
     this.load.image("chapter5-mother", "assets/chapter5-mother.png");
+    this.load.image("chapter5-mother-jump", "assets/chapter5-mother-jump.png");
+    this.load.image("chapter5-fawn", "assets/chapter5-fawn.png");
     this.load.image("chapter5-log", "assets/chapter5-log.png");
     this.load.image("chapter5-victory", "assets/chapter5-victory.png");
     this.load.image("chapter5-failure", "assets/chapter5-failure.png");
@@ -1386,6 +1389,7 @@ class ChapterFiveRun extends Phaser.Scene {
     this.add.image(width / 2, height / 2, "chapter5-forest").setDisplaySize(width, height);
     this.add.rectangle(width / 2, height / 2, width, height, 0x07101b, .12);
     this.mother = this.add.image(520, 500, "chapter5-mother").setDisplaySize(335, 223).setDepth(8);
+    this.fawn = this.add.image(815, 500, "chapter5-fawn").setDisplaySize(220, 147).setDepth(8);
     for (let i = 0; i < 42; i++) {
       const snow = this.add.circle(Phaser.Math.Between(0, width), Phaser.Math.Between(0, height), Phaser.Math.Between(1, 4), 0xe9f4ff, Phaser.Math.FloatBetween(.25, .75)).setDepth(9);
       this.tweens.add({ targets: snow, x: snow.x - Phaser.Math.Between(90, 250), y: height + 20, duration: Phaser.Math.Between(2200, 5200), delay: Phaser.Math.Between(0, 1800), repeat: -1 });
@@ -1431,6 +1435,7 @@ class ChapterFiveRun extends Phaser.Scene {
     const remaining = Math.max(0, 20 - this.elapsed);
     this.timerText.setText(`00:${Math.ceil(remaining).toString().padStart(2, "0")}`);
     this.mother.setAngle(Math.sin(this.elapsed * 14) * 2.2);
+    this.fawn.setY(500 + Math.sin(this.elapsed * 18 + .8) * 7).setAngle(Math.sin(this.elapsed * 15 + 1.4) * 2.5);
     if (remaining <= 0) this.finish(this.jumps >= 10);
   }
 
@@ -1453,7 +1458,11 @@ class ChapterFiveRun extends Phaser.Scene {
       this.spawnClock = 1.7;
     }
     this.jumping = true;
-    this.tweens.add({ targets: this.mother, y: 325, angle: -6, duration: 420, ease: "Sine.Out", yoyo: true, hold: 520, onComplete: () => { this.mother.setY(500).setAngle(0); this.jumping = false; } });
+    this.mother.setTexture("chapter5-mother-jump").setDisplaySize(335, 223);
+    this.tweens.add({ targets: this.mother, y: 315, angle: -3, scaleX: 1.04, scaleY: .98, duration: 420, ease: "Sine.Out", yoyo: true, hold: 520, onComplete: () => {
+      this.mother.setTexture("chapter5-mother").setDisplaySize(335, 223).setY(500).setAngle(0);
+      this.jumping = false;
+    } });
     this.tweens.add({ targets: this.jumpButton, scale: .86, duration: 60, yoyo: true });
   }
 
@@ -1473,10 +1482,17 @@ class ChapterFiveRun extends Phaser.Scene {
       this.sound.play("chapter5-shotgun", { volume: .98 });
       this.cameras.main.flash(140, 255, 245, 225, false);
       this.cameras.main.shake(520, .026);
+      const tracer = this.add.rectangle(1370, 350, 300, 6, 0xffefad, 1).setDepth(90).setAngle(-7);
+      const tracerGlow = this.add.rectangle(1370, 350, 380, 18, 0xffd15c, .28).setDepth(89).setAngle(-7);
+      this.tweens.add({ targets: [tracer, tracerGlow], x: -220, y: 505, duration: 210, ease: "Power3", onComplete: () => { tracer.destroy(); tracerGlow.destroy(); } });
+      for (let i = 0; i < 18; i++) {
+        const impact = this.add.circle(560, 475, Phaser.Math.Between(2, 6), 0xf4fbff, Phaser.Math.FloatBetween(.45, 1)).setDepth(91);
+        this.tweens.add({ targets: impact, x: impact.x + Phaser.Math.Between(-80, 100), y: impact.y + Phaser.Math.Between(-85, 45), alpha: 0, duration: Phaser.Math.Between(280, 600), onComplete: () => impact.destroy() });
+      }
       this.tweens.add({ targets: this.mother, y: 555, angle: 76, alpha: .35, duration: 240 });
       const black = this.add.rectangle(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, 0x000000, 1).setDepth(100).setAlpha(0);
-      this.time.delayedCall(220, () => black.setAlpha(1));
-      this.time.delayedCall(2200, () => { black.destroy(); this.showEnding(false); });
+      this.time.delayedCall(520, () => black.setAlpha(1));
+      this.time.delayedCall(2500, () => { black.destroy(); this.showEnding(false); });
     }
   }
 
