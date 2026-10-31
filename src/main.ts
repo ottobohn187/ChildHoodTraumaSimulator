@@ -1473,11 +1473,13 @@ class ChapterFiveRun extends Phaser.Scene {
     }
     this.jumping = true;
     this.mother.setTexture("chapter5-mother-jump").setDisplaySize(335, 223);
-    this.tweens.add({ targets: this.mother, y: 315, duration: 500, ease: "Quad.Out", onComplete: () => {
-      this.tweens.add({ targets: this.mother, y: 500, duration: 500, ease: "Quad.In", onComplete: () => {
-        this.mother.setTexture("chapter5-mother").setDisplaySize(335, 223).setY(500).setAngle(0);
-        this.jumping = false;
-      } });
+    this.tweens.add({ targets: this.mother, y: 285, duration: 500, ease: "Quad.Out", onComplete: () => {
+      this.time.delayedCall(400, () => {
+        this.tweens.add({ targets: this.mother, y: 500, duration: 600, ease: "Quad.In", onComplete: () => {
+          this.mother.setTexture("chapter5-mother").setDisplaySize(335, 223).setY(500).setAngle(0);
+          this.jumping = false;
+        } });
+      });
     } });
     this.tweens.add({ targets: this.jumpButton, scale: .86, duration: 60, yoyo: true });
   }
