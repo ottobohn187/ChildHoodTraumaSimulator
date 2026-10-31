@@ -1835,8 +1835,22 @@ class ChapterSixEndCredits extends Phaser.Scene {
     this.music = this.sound.add("chapter6-end-credits", { volume: .74, loop: true });
     this.music.play();
 
-    const timings = [0, 3000, 6000, 9000, 12000, 14400, 16800, 19200, 21600];
-    CHAPTER_SIX_CREDIT_BEATS.forEach((beat, i) => this.time.delayedCall(timings[i], () => this.showBeat(beat)));
+    // Measured against the soundtrack: vocals and healing imagery alternate with each organ/bass entrance.
+    const musicalSequence = [
+      { at: 0, beat: 0 },       // vocal
+      { at: 2360, beat: 4 },    // organ / bass
+      { at: 4680, beat: 1 },    // vocal
+      { at: 6260, beat: 5 },    // organ / bass
+      { at: 8500, beat: 2 },    // vocal
+      { at: 10360, beat: 6 },   // organ / bass
+      { at: 12900, beat: 3 },   // vocal
+      { at: 14340, beat: 7 },   // organ / bass
+      { at: 16660, beat: 0 },   // vocal
+      { at: 18320, beat: 4 },   // organ / bass
+      { at: 20680, beat: 3 },   // vocal
+      { at: 22360, beat: 8 },   // final organ / bass + Teams call
+    ];
+    musicalSequence.forEach(({ at, beat }) => this.time.delayedCall(at, () => this.showBeat(CHAPTER_SIX_CREDIT_BEATS[beat])));
   }
 
   private showDebugBeat(index: number) {
@@ -1893,8 +1907,8 @@ class ChapterSixEndCredits extends Phaser.Scene {
       this.beginTeamsEnding();
     }
 
-    if (beat.horror) this.cameras.main.shake(beat.key === "teams" ? 320 : 160, beat.key === "teams" ? .012 : .004);
-    this.tweens.add({ targets: [next, shade, title, caption], alpha: 1, duration: beat.horror ? 240 : 520, ease: "Sine.Out" });
+    if (this.currentImage) this.hitMusicalTransition(beat.horror, beat.key === "teams");
+    this.tweens.add({ targets: [next, shade, title, caption], alpha: 1, duration: beat.horror ? 90 : 260, ease: beat.horror ? "Power3" : "Sine.Out" });
     const oldImage = this.currentImage;
     const oldShade = this.currentShade;
     const oldTitle = this.currentTitle;
@@ -1906,6 +1920,24 @@ class ChapterSixEndCredits extends Phaser.Scene {
     this.currentShade = shade;
     this.currentTitle = title;
     this.currentCaption = caption;
+  }
+
+  private hitMusicalTransition(horror: boolean, teams: boolean) {
+    const { width, height } = this.scale;
+    this.cameras.main.shake(teams ? 650 : horror ? 470 : 250, teams ? .032 : horror ? .022 : .009);
+    const flash = this.add.rectangle(width / 2, height / 2, width, height, horror ? 0x9d001c : 0xfff1c6, horror ? .5 : .23).setDepth(12);
+    this.tweens.add({ targets: flash, alpha: 0, duration: horror ? 280 : 420, ease: "Power2", onComplete: () => flash.destroy() });
+    for (let i = 0; i < (horror ? 12 : 5); i++) {
+      const bar = this.add.rectangle(
+        Phaser.Math.Between(-100, width + 100),
+        Phaser.Math.Between(0, height),
+        Phaser.Math.Between(140, 580),
+        Phaser.Math.Between(2, horror ? 17 : 8),
+        horror ? Phaser.Math.RND.pick([0xff1648, 0x050505, 0xe8f7ff]) : 0xfff1c6,
+        Phaser.Math.FloatBetween(.18, .72),
+      ).setDepth(13);
+      this.tweens.add({ targets: bar, x: bar.x + Phaser.Math.Between(-260, 260), alpha: 0, duration: Phaser.Math.Between(90, 260), onComplete: () => bar.destroy() });
+    }
   }
 
   private showPostCredits() {
