@@ -12,9 +12,9 @@ const CHAPTER_TWO_HEALED_KEY = "trauma-chapter-2-healed";
 const CHAPTER_THREE_HEALED_KEY = "trauma-chapter-3-healed";
 const CHAPTER_FOUR_HEALED_KEY = "trauma-chapter-4-healed";
 const BONUS_DONE_KEY = "trauma-bonus-done";
-const DEBUG_UNLOCK_CHAPTER_TWO = true;
-const DEBUG_UNLOCK_CHAPTER_THREE = true;
-const DEBUG_UNLOCK_CHAPTER_FOUR = true;
+const CHAPTER_FOUR_BONUS_DONE_KEY = "trauma-chapter-4-bonus-done";
+const CHAPTER_FIVE_HEALED_KEY = "trauma-chapter-5-healed";
+const CHAPTER_SIX_COMPLETE_KEY = "trauma-chapter-6-complete";
 const TRAUMA_RADIO_TRACKS = [
   { title: "System Idle", chapter: "Main Menu", file: "assets/menu-system-idle.mp3" },
   { title: "Artax and the Swamp of Sadness", chapter: "Chapter 1", file: "assets/chapter-1-cover.mp3" },
@@ -111,6 +111,12 @@ function stopTraumaRadio() {
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible" && traumaRadioAudio && !traumaRadioAudio.paused) requestTraumaRadioWakeLock();
 });
+
+function addAlwaysAvailableMenuButton(scene: Phaser.Scene) {
+  const button = scene.add.rectangle(68, 701, 120, 28, 0x080a0b, .88).setStrokeStyle(1, 0x9da4a2, .8).setInteractive({ useHandCursor: true }).setDepth(500);
+  scene.add.text(68, 701, "MAIN MENU", { fontFamily: "Arial Black", fontSize: "10px", color: "#e2e5e3", stroke: "#000", strokeThickness: 3 }).setOrigin(.5).setDepth(501);
+  button.on("pointerdown", () => { scene.sound.stopAll(); scene.scene.start("menu"); });
+}
 const CHAPTER_SIX_CREDIT_BEATS = [
   { key: "healing-room", title: "YOU CAME BACK", caption: "The child no longer has to wait alone.", horror: false },
   { key: "bike", title: "LEARNING TO RIDE", caption: "This time, someone runs beside you.", horror: false },
@@ -129,9 +135,13 @@ const CHAPTER_SIX_CREDIT_BEATS = [
 class ChapterSelect extends Phaser.Scene {
   private gender: PlayerGender | null = null;
   private chapterOneHealed = false;
+  private chapterTwoHealed = false;
   private chapterThreeHealed = false;
   private chapterFourHealed = false;
   private bonusDone = false;
+  private chapterFourBonusDone = false;
+  private chapterFiveHealed = false;
+  private chapterSixComplete = false;
   private menuMusic?: Phaser.Sound.BaseSound;
 
   constructor() { super("menu"); }
@@ -149,9 +159,13 @@ class ChapterSelect extends Phaser.Scene {
     const { width, height } = this.scale;
     this.gender = localStorage.getItem(PROFILE_KEY) as PlayerGender | null;
     this.chapterOneHealed = localStorage.getItem(CHAPTER_ONE_HEALED_KEY) === "true";
+    this.chapterTwoHealed = localStorage.getItem(CHAPTER_TWO_HEALED_KEY) === "true";
     this.chapterThreeHealed = localStorage.getItem(CHAPTER_THREE_HEALED_KEY) === "true";
     this.chapterFourHealed = localStorage.getItem(CHAPTER_FOUR_HEALED_KEY) === "true";
     this.bonusDone = localStorage.getItem(BONUS_DONE_KEY) === "true";
+    this.chapterFourBonusDone = localStorage.getItem(CHAPTER_FOUR_BONUS_DONE_KEY) === "true";
+    this.chapterFiveHealed = localStorage.getItem(CHAPTER_FIVE_HEALED_KEY) === "true";
+    this.chapterSixComplete = localStorage.getItem(CHAPTER_SIX_COMPLETE_KEY) === "true";
     this.add.image(width / 2, height / 2, "swamp").setDisplaySize(width, height).setAlpha(.34);
     this.add.rectangle(width / 2, height / 2, width, height, 0x030606, .67);
     this.makeMenuHeader(width);
@@ -159,9 +173,7 @@ class ChapterSelect extends Phaser.Scene {
     this.makeChapterCard(36, 174, 748, 390);
     this.makeChapterTwoCard(808, 174, 436, 390);
     this.makeChapterRail();
-    this.makeFinalBossShortcut(width);
-    this.makeCreditsDebugShortcut(width);
-    this.makeTraumaRadioShortcut(width);
+    this.makeTraumaRadioShortcut();
 
     this.menuMusic = this.sound.add("menu-system-idle", { volume: .38, loop: true });
     this.menuMusic.play();
@@ -198,36 +210,37 @@ class ChapterSelect extends Phaser.Scene {
   }
 
   private makeChapterTwoCard(x: number, y: number, w: number, h: number) {
-    const available = DEBUG_UNLOCK_CHAPTER_TWO || this.chapterOneHealed;
+    const available = this.chapterOneHealed;
     this.add.image(x + w / 2, y + h / 2, "chapter2-arena").setDisplaySize(w, h).setAlpha(available ? .62 : .18);
     const card = this.add.rectangle(x, y, w, h, 0x050606, available ? .52 : .72).setOrigin(0).setStrokeStyle(2, available ? 0xc5a964 : 0x606663, .8);
     if (available) card.setInteractive({ useHandCursor: true }).on("pointerdown", () => this.scene.start("chapter2"));
     this.add.text(x + 24, y + 20, "CHAPTER 2", { fontFamily: "Arial Black", fontSize: "20px", color: available ? "#d6c49b" : "#777e79" });
     this.add.text(x + 24, y + 54, available ? "MEMORY UNLOCKED" : "LOCKED MEMORY", { fontFamily: "Arial Black", fontSize: "31px", color: available ? "#eee4ce" : "#929894", stroke: "#000", strokeThickness: 5 });
     this.add.text(x + w / 2, y + h / 2 + 12, available ? "II" : "🔒", { fontFamily: "Georgia", fontStyle: "bold", fontSize: "68px", color: "#d8c084" }).setOrigin(.5);
-    this.add.text(x + w / 2, y + h - 48, available ? "CLICK TO FIGHT  •  DEBUG UNLOCK" : "HEAL CHAPTER 1 TO CONTINUE", { fontFamily: "Arial Black", fontSize: "14px", color: available ? "#e2ca8e" : "#777e79" }).setOrigin(.5);
+    this.add.text(x + w / 2, y + h - 48, available ? (this.chapterTwoHealed ? "✓ HEALED  •  CLICK TO REPLAY" : "CLICK TO FIGHT") : "HEAL CHAPTER 1 TO CONTINUE", { fontFamily: "Arial Black", fontSize: "14px", color: available ? "#e2ca8e" : "#777e79" }).setOrigin(.5);
   }
 
   private makeChapterRail() {
-    const chapterThreeAvailable = DEBUG_UNLOCK_CHAPTER_THREE || this.bonusDone;
-    const chapterFourAvailable = DEBUG_UNLOCK_CHAPTER_FOUR || this.chapterThreeHealed;
-    const labels = [this.chapterOneHealed ? "1. HEALED" : "1. ARTAX", "2. UNLOCKED", this.chapterThreeHealed ? "3. HEALED" : chapterThreeAvailable ? "3. DIP RESCUE" : "3. LOCKED", this.chapterFourHealed ? "4. HEALED" : chapterFourAvailable ? "4. OLD YELLER" : "4. LOCKED", "BONUS 4", "5. BAMBI"];
-    labels.forEach((label, i) => {
-      const x = 36 + i * 202;
-      const chapterThree = i === 2 && chapterThreeAvailable;
-      const chapterFour = i === 3 && chapterFourAvailable;
-      const chapterFourBonus = i === 4;
-      const chapterFive = i === 5;
-      const available = chapterThree || chapterFour || chapterFourBonus || chapterFive;
-      const rail = this.add.rectangle(x, 584, 184, 91, i === 0 ? 0x24312e : available ? 0x183224 : 0x0b0e0d, .96).setOrigin(0).setStrokeStyle(i === 0 ? 4 : available ? 3 : 2, i === 0 ? 0xc92c26 : available ? 0x71d86f : 0x474c49, 1);
-      this.add.text(x + 92, 644, label, { fontFamily: "Arial Black", fontSize: "13px", color: i === 0 ? "#f0e7d4" : available ? "#c9f5b9" : "#676c69" }).setOrigin(.5);
-      if (i > 0 && i !== 1 && !available) this.add.text(x + 92, 614, "🔒", { fontSize: "22px" }).setOrigin(.5);
-      if (i === 1 || available) this.add.text(x + 92, 614, chapterFourBonus ? "VIEW" : chapterFive ? "JUMP" : available ? "RUN" : "✓", { fontFamily: "Arial Black", fontSize: available ? "17px" : "24px", color: "#b8dda8" }).setOrigin(.5);
-      if (available) {
+    const stages = [
+      { label: "1. ARTAX", scene: "swamp", unlocked: true, complete: this.chapterOneHealed },
+      { label: "2. LITTLEFOOT", scene: "chapter2", unlocked: this.chapterOneHealed, complete: this.chapterTwoHealed },
+      { label: "BONUS 2", scene: "bonus", unlocked: this.chapterTwoHealed, complete: this.bonusDone },
+      { label: "3. THE DIP", scene: "chapter3", unlocked: this.bonusDone, complete: this.chapterThreeHealed },
+      { label: "4. YELLER", scene: "chapter4", unlocked: this.chapterThreeHealed, complete: this.chapterFourHealed },
+      { label: "BONUS 4", scene: "chapter4bonus", unlocked: this.chapterFourHealed, complete: this.chapterFourBonusDone },
+      { label: "5. BAMBI", scene: "chapter5", unlocked: this.chapterFourBonusDone, complete: this.chapterFiveHealed },
+      { label: "6. TRUE END", scene: "chapter6", unlocked: this.chapterFiveHealed, complete: this.chapterSixComplete },
+    ];
+    stages.forEach((stage, i) => {
+      const x = 17 + i * 157;
+      const rail = this.add.rectangle(x, 584, 145, 91, stage.complete ? 0x284b35 : stage.unlocked ? 0x183224 : 0x0b0e0d, .96).setOrigin(0).setStrokeStyle(stage.complete ? 3 : 2, stage.complete ? 0xb7e38f : stage.unlocked ? 0x71d86f : 0x474c49, 1);
+      this.add.text(x + 72.5, 642, stage.complete ? `${stage.label}\nHEALED` : stage.label, { fontFamily: "Arial Black", fontSize: stage.complete ? "10px" : "11px", align: "center", color: stage.complete ? "#e2f6d4" : stage.unlocked ? "#c9f5b9" : "#676c69", lineSpacing: 4 }).setOrigin(.5);
+      this.add.text(x + 72.5, 611, stage.complete ? "✓" : stage.unlocked ? "PLAY" : "🔒", { fontFamily: "Arial Black", fontSize: stage.complete ? "21px" : stage.unlocked ? "12px" : "20px", color: stage.complete ? "#bceaa8" : stage.unlocked ? "#83cf78" : "#676c69" }).setOrigin(.5);
+      if (stage.unlocked) {
         rail.setInteractive({ useHandCursor: true });
-        rail.on("pointerover", () => rail.setStrokeStyle(5, 0xa5ff91, 1));
-        rail.on("pointerout", () => rail.setStrokeStyle(3, 0x71d86f, 1));
-        rail.on("pointerdown", () => this.gender ? this.scene.start(chapterFive ? "chapter5" : chapterFourBonus ? "chapter4bonus" : chapterFour ? "chapter4" : "chapter3") : this.showGenderPrompt());
+        rail.on("pointerover", () => rail.setStrokeStyle(4, 0xa5ff91, 1));
+        rail.on("pointerout", () => rail.setStrokeStyle(stage.complete ? 3 : 2, stage.complete ? 0xb7e38f : 0x71d86f, 1));
+        rail.on("pointerdown", () => this.gender ? this.scene.start(stage.scene) : this.showGenderPrompt());
       }
     });
   }
@@ -248,10 +261,10 @@ class ChapterSelect extends Phaser.Scene {
     button.on("pointerdown", () => this.showCreditsDebugPanel());
   }
 
-  private makeTraumaRadioShortcut(width: number) {
-    const button = this.add.rectangle(width - 780, 548, 250, 38, 0x5b1725, .98).setStrokeStyle(2, 0xff6a82, 1).setInteractive({ useHandCursor: true });
-    this.add.circle(width - 881, 548, 5, 0xff233f, 1);
-    this.add.text(width - 780, 548, "TRAUMA RADIO  •  LIVE", { fontFamily: "Arial Black", fontSize: "12px", color: "#ffe3e8", stroke: "#21050a", strokeThickness: 3 }).setOrigin(.5);
+  private makeTraumaRadioShortcut() {
+    const button = this.add.rectangle(170, 699, 276, 34, 0x5b1725, .98).setStrokeStyle(2, 0xff6a82, 1).setInteractive({ useHandCursor: true });
+    this.add.circle(58, 699, 5, 0xff233f, 1);
+    this.add.text(170, 699, "TRAUMA RADIO  •  LIVE", { fontFamily: "Arial Black", fontSize: "12px", color: "#ffe3e8", stroke: "#21050a", strokeThickness: 3 }).setOrigin(.5);
     button.on("pointerover", () => button.setFillStyle(0x8b263a, 1));
     button.on("pointerout", () => button.setFillStyle(0x5b1725, .98));
     button.on("pointerdown", () => this.scene.start("radio"));
@@ -411,6 +424,7 @@ class ChapterTwoBattle extends Phaser.Scene {
     if (!this.anims.exists("blood-squirt-right-animation")) {
       this.anims.create({ key: "blood-squirt-right-animation", frames: this.anims.generateFrameNumbers("blood-squirt-right", { start: 0, end: 15 }), frameRate: 26, repeat: 0 });
     }
+    addAlwaysAvailableMenuButton(this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.sound.stopAll());
   }
 
@@ -735,6 +749,7 @@ class ChapterThreeRescue extends Phaser.Scene {
 
     this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE).on("down", () => this.pressRun());
     this.input.keyboard!.on("keydown-M", () => this.scene.start("menu"));
+    addAlwaysAvailableMenuButton(this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.sound.stopAll());
   }
 
@@ -835,7 +850,7 @@ class ChapterThreeRescue extends Phaser.Scene {
     const buttonY = won ? height - 75 : height / 2 + 70;
     const button = this.add.rectangle(width / 2, buttonY, 294, 66, 0x296d2b, 1).setStrokeStyle(3, 0xcaffaa, 1).setInteractive({ useHandCursor: true }).setDepth(32);
     this.add.text(width / 2, buttonY, won ? "CONTINUE" : "TRY AGAIN", { fontFamily: "Arial Black", fontSize: "22px", color: "#f1ffe5", stroke: "#001205", strokeThickness: 5 }).setOrigin(.5).setDepth(33);
-    button.on("pointerdown", () => won ? this.scene.start("chapter4bonus") : this.scene.restart());
+    button.on("pointerdown", () => won ? this.scene.start("chapter4") : this.scene.restart());
     this.add.text(width / 2, won ? height - 27 : height / 2 + 126, "M: CHAPTER SELECT", { fontFamily: "Arial Black", fontSize: "12px", color: "#c4d9ba", stroke: "#000", strokeThickness: 3 }).setOrigin(.5).setDepth(32);
   }
 
@@ -922,6 +937,7 @@ class ChapterFourRescue extends Phaser.Scene {
     this.failureMusic = this.sound.add("chapter4-failure-music", { volume: .62 });
     this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE).on("down", () => this.pressRun());
     this.input.keyboard!.on("keydown-M", () => this.scene.start("menu"));
+    addAlwaysAvailableMenuButton(this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.sound.stopAll());
   }
 
@@ -1027,7 +1043,7 @@ class ChapterFourRescue extends Phaser.Scene {
     const buttonY = won ? height - 75 : height / 2 + 70;
     const button = this.add.rectangle(width / 2, buttonY, 294, 66, 0x87501f, 1).setStrokeStyle(3, 0xffd58d, 1).setInteractive({ useHandCursor: true }).setDepth(32);
     this.add.text(width / 2, buttonY, won ? "CONTINUE" : "TRY AGAIN", { fontFamily: "Arial Black", fontSize: "22px", color: "#fff2d9", stroke: "#2a1000", strokeThickness: 5 }).setOrigin(.5).setDepth(33);
-    button.on("pointerdown", () => won ? this.scene.start("menu") : this.scene.restart());
+    button.on("pointerdown", () => won ? this.scene.start("chapter4bonus") : this.scene.restart());
     this.add.text(width / 2, won ? height - 27 : height / 2 + 126, "M: CHAPTER SELECT", { fontFamily: "Arial Black", fontSize: "12px", color: "#d9c2a1", stroke: "#000", strokeThickness: 3 }).setOrigin(.5).setDepth(32);
   }
 
@@ -1129,6 +1145,8 @@ class ChapterFourBonus extends Phaser.Scene {
     this.music.play();
     this.showMoment();
     addCrtTelevision(this);
+    this.input.keyboard!.on("keydown-M", () => { this.sound.stopAll(); this.scene.start("menu"); });
+    addAlwaysAvailableMenuButton(this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.sound.stopAll());
   }
 
@@ -1166,7 +1184,8 @@ class ChapterFourBonus extends Phaser.Scene {
     this.advanceTimer?.remove(false);
     if (this.step >= CHAPTER_FOUR_HEALING_MOMENTS.length - 1) {
       this.sound.stopAll();
-      this.scene.start("menu");
+      localStorage.setItem(CHAPTER_FOUR_BONUS_DONE_KEY, "true");
+      this.scene.start("chapter5");
       return;
     }
     this.step += 1;
@@ -1224,6 +1243,8 @@ class BonusHealing extends Phaser.Scene {
     this.music.play();
     this.showStep();
     addCrtTelevision(this);
+    this.input.keyboard!.on("keydown-M", () => { this.sound.stopAll(); this.scene.start("menu"); });
+    addAlwaysAvailableMenuButton(this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.advanceTimer?.remove(false);
       this.voiceTimer?.remove(false);
@@ -1293,7 +1314,7 @@ class BonusHealing extends Phaser.Scene {
     button.on("pointerdown", () => {
       if (final) {
         localStorage.setItem(BONUS_DONE_KEY, "true");
-        this.scene.start("menu");
+        this.scene.start("chapter3");
       } else {
         next();
       }
@@ -1403,6 +1424,7 @@ class SwampRescue extends Phaser.Scene {
     this.input.keyboard!.on("keydown-M", () => { this.sound.stopAll(); this.scene.start("menu"); });
     this.music = this.sound.add("chapter-music");
     this.victoryMusic = this.sound.add("victory-theme");
+    addAlwaysAvailableMenuButton(this);
   }
 
   private makeAtmosphere(width: number, height: number) {
@@ -1555,7 +1577,7 @@ class SwampRescue extends Phaser.Scene {
       }).setOrigin(.5, 0).setAlpha(0).setDepth(33);
       const continueButton = this.add.rectangle(width / 2, height - 83, 286, 62, 0x6d2a24, 1).setStrokeStyle(3, 0xffe0a0, 1).setAlpha(0).setDepth(34).setInteractive({ useHandCursor: true });
       const continueText = this.add.text(width / 2, height - 83, "CONTINUE", { fontFamily: "Arial Black", fontSize: "22px", color: "#fff2d4", stroke: "#000", strokeThickness: 4 }).setOrigin(.5).setAlpha(0).setDepth(35);
-      continueButton.on("pointerdown", () => { this.sound.stopAll(); this.scene.start("menu"); });
+      continueButton.on("pointerdown", () => { this.sound.stopAll(); this.scene.start("chapter2"); });
       const replay = this.add.text(width / 2, height - 35, "R: REPLAY CHAPTER   •   M: CHAPTER SELECT", {
         fontFamily: "Arial Black", fontSize: "12px", color: "#e0d4bd", stroke: "#000", strokeThickness: 4,
       }).setOrigin(.5).setAlpha(0).setDepth(33);
@@ -1636,6 +1658,7 @@ class ChapterFiveRun extends Phaser.Scene {
     this.failureMusic = this.sound.add("chapter5-failure-music", { volume: .66 });
     this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE).on("down", () => this.jump());
     this.input.keyboard!.on("keydown-M", () => this.scene.start("menu"));
+    addAlwaysAvailableMenuButton(this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.sound.stopAll());
   }
 
@@ -1764,7 +1787,11 @@ class ChapterFiveRun extends Phaser.Scene {
     this.add.text(width / 2, 82, won ? "Bambi gets to grow up with his mother." : "She fell in the snow. Try the run again.", { fontFamily: "Georgia", fontSize: "23px", color: "#edf3f7", stroke: "#000", strokeThickness: 5 }).setOrigin(.5).setDepth(42);
     const button = this.add.rectangle(width / 2, height - 80, 300, 64, 0x376c87, 1).setStrokeStyle(3, 0xd9f2ff, 1).setInteractive({ useHandCursor: true }).setDepth(42);
     this.add.text(width / 2, height - 80, won ? "CONTINUE" : "TRY AGAIN", { fontFamily: "Arial Black", fontSize: "21px", color: "#fff", stroke: "#071018", strokeThickness: 5 }).setOrigin(.5).setDepth(43);
-    button.on("pointerdown", () => won ? this.scene.start("menu") : this.scene.restart());
+    button.on("pointerdown", () => {
+      if (!won) return this.scene.restart();
+      localStorage.setItem(CHAPTER_FIVE_HEALED_KEY, "true");
+      this.scene.start("chapter6");
+    });
   }
 }
 
@@ -1790,6 +1817,8 @@ class ChapterSixTrueEnding extends Phaser.Scene {
     }
     this.music = this.sound.add("chapter6-last-scene", { volume: .58, loop: true });
     this.music.play({ seek: 20 });
+    this.input.keyboard!.on("keydown-M", () => this.scene.start("menu"));
+    addAlwaysAvailableMenuButton(this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.sound.stopAll());
     this.showOpening();
   }
@@ -1943,6 +1972,8 @@ class ChapterSixEndCredits extends Phaser.Scene {
 
   create() {
     this.cameras.main.setBackgroundColor(0x000000);
+    this.input.keyboard!.on("keydown-M", () => { this.sound.stopAll(); this.scene.start("menu"); });
+    addAlwaysAvailableMenuButton(this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.sound.stopAll());
     if (this.debugBeat !== null) {
       this.showDebugBeat(this.debugBeat);
@@ -2001,8 +2032,61 @@ class ChapterSixEndCredits extends Phaser.Scene {
     });
     this.time.delayedCall(14100, () => {
       this.sound.stopAll();
-      this.scene.start("menu");
+      this.showThankYou();
     });
+  }
+
+  private showThankYou() {
+    localStorage.setItem(CHAPTER_SIX_COMPLETE_KEY, "true");
+    this.cameras.main.resetFX();
+    this.children.removeAll(true);
+    const { width, height } = this.scale;
+    const shareUrl = `${window.location.origin}/`;
+    this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 1);
+    this.add.text(width / 2, 132, "THANK YOU FOR PLAYING", { fontFamily: "Arial Black", fontSize: "52px", color: "#ffffff", stroke: "#54142c", strokeThickness: 9 }).setOrigin(.5);
+    this.add.text(width / 2, 218, "You couldn't save your childhood.\nBut you can stop fighting it.", { fontFamily: "Georgia", fontStyle: "italic", fontSize: "27px", align: "center", color: "#ddced5", lineSpacing: 10 }).setOrigin(.5);
+    this.add.text(width / 2, 320, "SHARE THE HEALING WITH YOUR FRIENDS", { fontFamily: "Arial Black", fontSize: "17px", color: "#c88fa2" }).setOrigin(.5);
+    this.add.rectangle(width / 2, 372, 620, 54, 0x0e0e10, 1).setStrokeStyle(2, 0x815363, 1);
+    this.add.text(width / 2, 372, shareUrl, { fontFamily: "Courier New", fontStyle: "bold", fontSize: "20px", color: "#f4eaf0" }).setOrigin(.5);
+    const status = this.add.text(width / 2, 438, "", { fontFamily: "Arial Black", fontSize: "13px", color: "#8fe0b0" }).setOrigin(.5);
+    const copyButton = this.add.rectangle(width / 2 - 180, 493, 300, 60, 0x64243d, 1).setStrokeStyle(3, 0xe69ab5, 1).setInteractive({ useHandCursor: true });
+    this.add.text(width / 2 - 180, 493, "COPY GAME LINK", { fontFamily: "Arial Black", fontSize: "16px", color: "#fff" }).setOrigin(.5);
+    const shareButton = this.add.rectangle(width / 2 + 180, 493, 300, 60, 0x2f5362, 1).setStrokeStyle(3, 0x96d9eb, 1).setInteractive({ useHandCursor: true });
+    this.add.text(width / 2 + 180, 493, "SHARE WITH FRIENDS", { fontFamily: "Arial Black", fontSize: "16px", color: "#fff" }).setOrigin(.5);
+    const menuButton = this.add.rectangle(width / 2, 603, 280, 54, 0x252126, 1).setStrokeStyle(2, 0x8d7b83, 1).setInteractive({ useHandCursor: true });
+    this.add.text(width / 2, 603, "RETURN TO MAIN MENU", { fontFamily: "Arial Black", fontSize: "14px", color: "#ded5d9" }).setOrigin(.5);
+
+    const copyLink = async () => {
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        status.setText("LINK COPIED — SEND IT TO SOMEONE WHO NEEDS IT");
+      } catch {
+        const textArea = document.createElement("textarea");
+        textArea.value = shareUrl;
+        textArea.style.position = "fixed";
+        textArea.style.opacity = "0";
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand("copy");
+        textArea.remove();
+        status.setText("LINK COPIED");
+      }
+    };
+    copyButton.on("pointerdown", copyLink);
+    shareButton.on("pointerdown", async () => {
+      if (navigator.share) {
+        try {
+          await navigator.share({ title: "Childhood Trauma Simulator", text: "Relive the moments that ruined a generation.", url: shareUrl });
+          status.setText("THANKS FOR SHARING THE TRAUMA");
+        } catch {
+          status.setText("SHARE CANCELLED — THE LINK IS STILL HERE");
+        }
+      } else {
+        await copyLink();
+      }
+    });
+    menuButton.on("pointerdown", () => this.scene.start("menu"));
+    this.cameras.main.fadeIn(900, 0, 0, 0);
   }
 
   private showBeat(beat: { key: string; title: string; caption: string; horror: boolean }) {
