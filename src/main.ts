@@ -1364,6 +1364,7 @@ class ChapterFiveRun extends Phaser.Scene {
   private elapsed = 0;
   private jumps = 0;
   private spawnClock = 0;
+  private obstaclesSpawned = 0;
   private started = false;
   private ended = false;
   private jumping = false;
@@ -1376,6 +1377,7 @@ class ChapterFiveRun extends Phaser.Scene {
     this.load.image("chapter5-mother-jump", "assets/chapter5-mother-jump.png");
     this.load.image("chapter5-fawn", "assets/chapter5-fawn.png");
     this.load.image("chapter5-log", "assets/chapter5-log.png");
+    this.load.image("chapter5-body-reference", "assets/chapter5-body-reference.png");
     this.load.image("chapter5-victory", "assets/chapter5-victory.png");
     this.load.image("chapter5-failure", "assets/chapter5-failure.png");
     this.load.audio("chapter5-main", "assets/chapter5-main.mp3");
@@ -1385,7 +1387,7 @@ class ChapterFiveRun extends Phaser.Scene {
 
   create() {
     const { width, height } = this.scale;
-    this.elapsed = 0; this.jumps = 0; this.spawnClock = 0; this.started = false; this.ended = false; this.jumping = false; this.logs = [];
+    this.elapsed = 0; this.jumps = 0; this.spawnClock = 0; this.obstaclesSpawned = 0; this.started = false; this.ended = false; this.jumping = false; this.logs = [];
     this.add.image(width / 2, height / 2, "chapter5-forest").setDisplaySize(width, height);
     this.add.rectangle(width / 2, height / 2, width, height, 0x07101b, .12);
     this.mother = this.add.image(520, 500, "chapter5-mother").setDisplaySize(335, 223).setDepth(8);
@@ -1413,13 +1415,13 @@ class ChapterFiveRun extends Phaser.Scene {
     const seconds = Math.min(delta / 1000, .05);
     this.elapsed += seconds;
     this.spawnClock -= seconds;
-    if (this.spawnClock <= 0 && this.jumps + this.logs.length < 10) {
+    if (this.spawnClock <= 0 && this.obstaclesSpawned < 10) {
       this.spawnLog();
       this.spawnClock = 1.7;
     }
     for (const log of [...this.logs]) {
       log.x -= 470 * seconds;
-      log.setAngle(Math.sin(this.elapsed * 9 + log.getData("phase")) * 3.5);
+      if (log.getData("kind") !== "body") log.setAngle(Math.sin(this.elapsed * 9 + log.getData("phase")) * 3.5);
       if (!log.getData("passed") && log.x < this.mother.x - 155) {
         log.setData("passed", true);
         this.jumps += 1;
@@ -1467,7 +1469,14 @@ class ChapterFiveRun extends Phaser.Scene {
   }
 
   private spawnLog(first = false) {
-    const log = this.add.image(first ? 900 : 1420, 530, "chapter5-log").setDisplaySize(460, 130).setDepth(9).setData("passed", false).setData("phase", Phaser.Math.FloatBetween(0, Math.PI * 2));
+    const isBody = this.obstaclesSpawned === 4;
+    const log = this.add.image(first ? 900 : 1420, isBody ? 515 : 530, isBody ? "chapter5-body-reference" : "chapter5-log").setDepth(9).setData("passed", false).setData("phase", Phaser.Math.FloatBetween(0, Math.PI * 2)).setData("kind", isBody ? "body" : "log");
+    if (isBody) {
+      log.setCrop(185, 0, 245, 108).setScale(1.68);
+    } else {
+      log.setDisplaySize(460, 130);
+    }
+    this.obstaclesSpawned += 1;
     this.logs.push(log);
   }
 
