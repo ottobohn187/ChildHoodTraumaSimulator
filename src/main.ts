@@ -1753,6 +1753,8 @@ class ChapterSixTrueEnding extends Phaser.Scene {
 
 class ChapterSixEndCredits extends Phaser.Scene {
   private music!: Phaser.Sound.BaseSound;
+  private teamsCall!: Phaser.Sound.BaseSound;
+  private teamsEndingStarted = false;
   private debugBeat: number | null = null;
   private currentImage?: Phaser.GameObjects.Image;
   private currentShade?: Phaser.GameObjects.Rectangle;
@@ -1763,30 +1765,35 @@ class ChapterSixEndCredits extends Phaser.Scene {
 
   init(data: { debugBeat?: number }) {
     this.debugBeat = Number.isInteger(data?.debugBeat) ? Phaser.Math.Clamp(data.debugBeat!, 0, CHAPTER_SIX_CREDIT_BEATS.length - 1) : null;
+    this.teamsEndingStarted = false;
   }
 
   preload() {
     const images = ["healing-room", "bike", "parent", "porch", "anxiety", "divorce", "bad-parent", "job", "teams"];
     images.forEach((name) => this.load.image(`chapter6-credits-${name}`, `assets/chapter6-credits-${name}.png`));
     this.load.audio("chapter6-end-credits", "assets/chapter6-end-credits.mp3");
+    this.load.audio("chapter6-teams-call", "assets/chapter6-teams-call.mp3");
   }
 
   create() {
     this.cameras.main.setBackgroundColor(0x000000);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.sound.stopAll());
     if (this.debugBeat !== null) {
       this.showDebugBeat(this.debugBeat);
       return;
     }
-    this.music = this.sound.add("chapter6-end-credits", { volume: .74 });
+    this.music = this.sound.add("chapter6-end-credits", { volume: .74, loop: true });
     this.music.play();
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.sound.stopAll());
 
     const timings = [0, 3000, 6000, 9000, 12000, 14400, 16800, 19200, 21600];
     CHAPTER_SIX_CREDIT_BEATS.forEach((beat, i) => this.time.delayedCall(timings[i], () => this.showBeat(beat)));
-    this.time.delayedCall(24400, () => this.showPostCredits());
   }
 
   private showDebugBeat(index: number) {
+    if (CHAPTER_SIX_CREDIT_BEATS[index].key === "teams") {
+      this.music = this.sound.add("chapter6-end-credits", { volume: .74, loop: true });
+      this.music.play({ seek: 21.6 });
+    }
     this.showBeat(CHAPTER_SIX_CREDIT_BEATS[index]);
     const { width } = this.scale;
     this.add.rectangle(width / 2, 38, width, 76, 0x020507, .88).setDepth(20);
@@ -1799,6 +1806,23 @@ class ChapterSixEndCredits extends Phaser.Scene {
     makeButton(width - 430, "◀ PREVIOUS", () => this.scene.restart({ debugBeat: (index + CHAPTER_SIX_CREDIT_BEATS.length - 1) % CHAPTER_SIX_CREDIT_BEATS.length }));
     makeButton(width - 265, "NEXT ▶", () => this.scene.restart({ debugBeat: (index + 1) % CHAPTER_SIX_CREDIT_BEATS.length }));
     makeButton(width - 100, "MAIN MENU", () => this.scene.start("menu"));
+  }
+
+  private beginTeamsEnding() {
+    if (this.teamsEndingStarted) return;
+    this.teamsEndingStarted = true;
+    this.teamsCall = this.sound.add("chapter6-teams-call", { volume: 1 });
+    this.teamsCall.play();
+    this.time.delayedCall(7300, () => this.teamsCall.play());
+    this.time.delayedCall(11900, () => {
+      this.cameras.main.fadeOut(2100, 0, 0, 0);
+      this.tweens.add({ targets: this.music, volume: 0, duration: 2100 });
+      this.tweens.add({ targets: this.teamsCall, volume: 0, duration: 2100 });
+    });
+    this.time.delayedCall(14100, () => {
+      this.sound.stopAll();
+      this.scene.start("menu");
+    });
   }
 
   private showBeat(beat: { key: string; title: string; caption: string; horror: boolean }) {
@@ -1816,6 +1840,7 @@ class ChapterSixEndCredits extends Phaser.Scene {
       const ring = this.add.circle(width - 110, 105, 54, 0xd72b55, .92).setStrokeStyle(5, 0xffb3c5, 1).setDepth(4).setAlpha(0);
       const phone = this.add.text(width - 110, 105, "☎", { fontFamily: "Arial Black", fontSize: "46px", color: "#ffffff" }).setOrigin(.5).setDepth(5).setAlpha(0);
       this.tweens.add({ targets: [ring, phone], alpha: 1, duration: 180, delay: 220, onComplete: () => this.tweens.add({ targets: ring, scale: 1.14, duration: 260, yoyo: true, repeat: -1 }) });
+      this.beginTeamsEnding();
     }
 
     if (beat.horror) this.cameras.main.shake(beat.key === "teams" ? 320 : 160, beat.key === "teams" ? .012 : .004);
