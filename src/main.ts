@@ -5,7 +5,7 @@ import { battleOutcome, rexAttack, tailStrike, type BattleState } from "./game/c
 import { DIP_RESCUE_SECONDS, dipRescueOutcome, stepDipRescue, tapRun, type DipRescueState } from "./game/chapter3Physics";
 import { YELLER_RESCUE_SECONDS, stepYellerRescue, tapYellerRun, yellerRescueOutcome, type YellerRescueState } from "./game/chapter4Physics";
 
-type PlayerGender = "male" | "female";
+type PlayerGender = "male" | "female" | "nonbinary";
 const PROFILE_KEY = "trauma-player-gender";
 const CHAPTER_ONE_HEALED_KEY = "trauma-chapter-1-healed";
 const CHAPTER_TWO_HEALED_KEY = "trauma-chapter-2-healed";
@@ -15,6 +15,26 @@ const BONUS_DONE_KEY = "trauma-bonus-done";
 const CHAPTER_FOUR_BONUS_DONE_KEY = "trauma-chapter-4-bonus-done";
 const CHAPTER_FIVE_HEALED_KEY = "trauma-chapter-5-healed";
 const CHAPTER_SIX_COMPLETE_KEY = "trauma-chapter-6-complete";
+const PROGRESSION_KEYS = [
+  CHAPTER_ONE_HEALED_KEY,
+  CHAPTER_TWO_HEALED_KEY,
+  BONUS_DONE_KEY,
+  CHAPTER_THREE_HEALED_KEY,
+  CHAPTER_FOUR_HEALED_KEY,
+  CHAPTER_FOUR_BONUS_DONE_KEY,
+  CHAPTER_FIVE_HEALED_KEY,
+  CHAPTER_SIX_COMPLETE_KEY,
+] as const;
+
+function resetGameState(clearProfile = true) {
+  PROGRESSION_KEYS.forEach((key) => localStorage.removeItem(key));
+  if (clearProfile) localStorage.removeItem(PROFILE_KEY);
+}
+
+function savedGender(): PlayerGender | null {
+  const value = localStorage.getItem(PROFILE_KEY);
+  return value === "male" || value === "female" || value === "nonbinary" ? value : null;
+}
 type TraumaRadioTrack = { title: string; chapter: string; file: string; artist?: string; album?: string };
 const TRAUMA_RADIO_TRACKS = [
   { title: "System Idle", chapter: "Main Menu", file: "assets/menu-system-idle.mp3", artist: "Net Gainz", album: "Cyberspace Grind" },
@@ -158,15 +178,16 @@ class ChapterSelect extends Phaser.Scene {
 
   create() {
     const { width, height } = this.scale;
-    this.gender = localStorage.getItem(PROFILE_KEY) as PlayerGender | null;
+    if (localStorage.getItem(CHAPTER_SIX_COMPLETE_KEY) === "true") resetGameState();
+    this.gender = savedGender();
     this.chapterOneHealed = localStorage.getItem(CHAPTER_ONE_HEALED_KEY) === "true";
-    this.chapterTwoHealed = localStorage.getItem(CHAPTER_TWO_HEALED_KEY) === "true";
-    this.chapterThreeHealed = localStorage.getItem(CHAPTER_THREE_HEALED_KEY) === "true";
-    this.chapterFourHealed = localStorage.getItem(CHAPTER_FOUR_HEALED_KEY) === "true";
-    this.bonusDone = localStorage.getItem(BONUS_DONE_KEY) === "true";
-    this.chapterFourBonusDone = localStorage.getItem(CHAPTER_FOUR_BONUS_DONE_KEY) === "true";
-    this.chapterFiveHealed = localStorage.getItem(CHAPTER_FIVE_HEALED_KEY) === "true";
-    this.chapterSixComplete = localStorage.getItem(CHAPTER_SIX_COMPLETE_KEY) === "true";
+    this.chapterTwoHealed = this.chapterOneHealed && localStorage.getItem(CHAPTER_TWO_HEALED_KEY) === "true";
+    this.bonusDone = this.chapterTwoHealed && localStorage.getItem(BONUS_DONE_KEY) === "true";
+    this.chapterThreeHealed = this.bonusDone && localStorage.getItem(CHAPTER_THREE_HEALED_KEY) === "true";
+    this.chapterFourHealed = this.chapterThreeHealed && localStorage.getItem(CHAPTER_FOUR_HEALED_KEY) === "true";
+    this.chapterFourBonusDone = this.chapterFourHealed && localStorage.getItem(CHAPTER_FOUR_BONUS_DONE_KEY) === "true";
+    this.chapterFiveHealed = this.chapterFourBonusDone && localStorage.getItem(CHAPTER_FIVE_HEALED_KEY) === "true";
+    this.chapterSixComplete = this.chapterFiveHealed && localStorage.getItem(CHAPTER_SIX_COMPLETE_KEY) === "true";
     this.add.image(width / 2, height / 2, "swamp").setDisplaySize(width, height).setAlpha(.34);
     this.add.rectangle(width / 2, height / 2, width, height, 0x030606, .67);
     this.makeMenuHeader(width);
@@ -175,12 +196,14 @@ class ChapterSelect extends Phaser.Scene {
     this.makeChapterTwoCard(808, 174, 436, 390);
     this.makeChapterRail();
     this.makeTraumaRadioShortcut();
+    this.makeResetButton();
 
     this.menuMusic = this.sound.add("menu-system-idle", { volume: .38, loop: true });
     this.menuMusic.play();
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.menuMusic?.stop());
 
-    const profile = this.add.text(width - 38, height - 24, this.gender ? `PROFILE: ${this.gender.toUpperCase()}  •  CHANGE` : "CHOOSE YOUR PROFILE", {
+    const profileLabel = this.gender === "nonbinary" ? "NON-BINARY" : this.gender?.toUpperCase();
+    const profile = this.add.text(width - 38, height - 24, this.gender ? `PROFILE: ${profileLabel}  •  CHANGE` : "CHOOSE YOUR PROFILE", {
       fontFamily: "Arial Black", fontSize: "12px", color: "#d7c9aa",
     }).setOrigin(1, .5).setInteractive({ useHandCursor: true });
     profile.on("pointerdown", () => this.showGenderPrompt());
@@ -271,6 +294,30 @@ class ChapterSelect extends Phaser.Scene {
     button.on("pointerdown", () => this.scene.start("radio"));
   }
 
+  private makeResetButton() {
+    const button = this.add.rectangle(640, 699, 190, 34, 0x252126, .98).setStrokeStyle(2, 0x8d7b83, 1).setInteractive({ useHandCursor: true });
+    this.add.text(640, 699, "RESET GAME", { fontFamily: "Arial Black", fontSize: "11px", color: "#e7dde1" }).setOrigin(.5);
+    button.on("pointerover", () => button.setFillStyle(0x4a333d, 1));
+    button.on("pointerout", () => button.setFillStyle(0x252126, .98));
+    button.on("pointerdown", () => this.showResetPrompt());
+  }
+
+  private showResetPrompt() {
+    const { width, height } = this.scale;
+    const overlay = this.add.container(0, 0).setDepth(100);
+    const shade = this.add.rectangle(width / 2, height / 2, width, height, 0x010202, .9).setInteractive();
+    const panel = this.add.rectangle(width / 2, height / 2, 610, 300, 0x111416, 1).setStrokeStyle(3, 0xbe8798, 1);
+    const title = this.add.text(width / 2, height / 2 - 92, "RESET THE ENTIRE GAME?", { fontFamily: "Arial Black", fontSize: "27px", color: "#fff0f3" }).setOrigin(.5);
+    const copy = this.add.text(width / 2, height / 2 - 35, "All healed chapters, bonus memories, and your profile choice\nwill be erased on this device.", { fontFamily: "Georgia", fontSize: "18px", color: "#cfc3c7", align: "center", lineSpacing: 7 }).setOrigin(.5);
+    const confirm = this.add.rectangle(width / 2 - 145, height / 2 + 78, 240, 58, 0x74253d, 1).setStrokeStyle(2, 0xef9eb7, 1).setInteractive({ useHandCursor: true });
+    const cancel = this.add.rectangle(width / 2 + 145, height / 2 + 78, 240, 58, 0x28322f, 1).setStrokeStyle(2, 0x8eaaa1, 1).setInteractive({ useHandCursor: true });
+    const confirmText = this.add.text(width / 2 - 145, height / 2 + 78, "YES, RESET", { fontFamily: "Arial Black", fontSize: "15px", color: "#fff" }).setOrigin(.5);
+    const cancelText = this.add.text(width / 2 + 145, height / 2 + 78, "KEEP MY PROGRESS", { fontFamily: "Arial Black", fontSize: "13px", color: "#e8f1ed" }).setOrigin(.5);
+    confirm.on("pointerdown", () => { resetGameState(); this.scene.restart(); });
+    cancel.on("pointerdown", () => overlay.destroy(true));
+    overlay.add([shade, panel, title, copy, confirm, cancel, confirmText, cancelText]);
+  }
+
   private showCreditsDebugPanel() {
     const { width, height } = this.scale;
     const overlay = this.add.container(0, 0).setDepth(80);
@@ -306,7 +353,7 @@ class ChapterSelect extends Phaser.Scene {
     const { width, height } = this.scale;
     const overlay = this.add.container(0, 0).setDepth(50);
     const block = this.add.rectangle(width / 2, height / 2, width, height, 0x010202, .86).setInteractive();
-    const panel = this.add.rectangle(width / 2, height / 2, 570, 330, 0x111816, .99).setStrokeStyle(3, 0xd5c18f, .95);
+    const panel = this.add.rectangle(width / 2, height / 2, 790, 330, 0x111816, .99).setStrokeStyle(3, 0xd5c18f, .95);
     const title = this.add.text(width / 2, height / 2 - 117, "WHO IS REENTERING THE MEMORY?", { fontFamily: "Arial Black", fontSize: "24px", color: "#fff2d0" }).setOrigin(.5);
     const copy = this.add.text(width / 2, height / 2 - 66, "This tailors the healing affirmation at the end.", { fontFamily: "Georgia", fontSize: "18px", color: "#c8d0cb" }).setOrigin(.5);
     const makeChoice = (x: number, label: string, value: PlayerGender) => {
@@ -315,10 +362,11 @@ class ChapterSelect extends Phaser.Scene {
       button.on("pointerdown", () => { localStorage.setItem(PROFILE_KEY, value); this.gender = value; overlay.destroy(true); this.scene.restart(); });
       return [button, text];
     };
-    const male = makeChoice(width / 2 - 120, "MALE", "male");
-    const female = makeChoice(width / 2 + 120, "FEMALE", "female");
+    const male = makeChoice(width / 2 - 240, "MALE", "male");
+    const female = makeChoice(width / 2, "FEMALE", "female");
+    const nonbinary = makeChoice(width / 2 + 240, "NON-BINARY", "nonbinary");
     const note = this.add.text(width / 2, height / 2 + 111, "Saved only on this device. You can change it anytime.", { fontFamily: "Georgia", fontSize: "14px", color: "#87918c" }).setOrigin(.5);
-    overlay.add([block, panel, title, copy, ...male, ...female, note]);
+    overlay.add([block, panel, title, copy, ...male, ...female, ...nonbinary, note]);
   }
 }
 
@@ -1197,7 +1245,7 @@ class ChapterFourBonus extends Phaser.Scene {
 class BonusHealing extends Phaser.Scene {
   private panel?: Phaser.GameObjects.Container;
   private step = 0;
-  private gender: PlayerGender = "male";
+  private gender: PlayerGender = "nonbinary";
   private music?: Phaser.Sound.BaseSound;
   private voice?: Phaser.Sound.BaseSound;
   private advanceTimer?: Phaser.Time.TimerEvent;
@@ -1239,7 +1287,7 @@ class BonusHealing extends Phaser.Scene {
 
   create() {
     this.step = 0;
-    this.gender = localStorage.getItem(PROFILE_KEY) === "female" ? "female" : "male";
+    this.gender = savedGender() ?? "nonbinary";
     this.music = this.sound.add("bonus-music", { volume: .3, loop: true });
     this.music.play();
     this.showStep();
@@ -1571,8 +1619,8 @@ class SwampRescue extends Phaser.Scene {
       const message = this.add.text(width / 2, 105, "ARTAX IS FREE  •  YOU CHANGED THE ENDING", {
         fontFamily: "Georgia", fontSize: "23px", color: "#f7ead3", stroke: "#1a0e08", strokeThickness: 5,
       }).setOrigin(.5, 0).setAlpha(0).setDepth(33);
-      const gender = localStorage.getItem(PROFILE_KEY) as PlayerGender | null;
-      const pronoun = gender === "female" ? "HER" : "HIM";
+      const gender = savedGender();
+      const pronoun = gender === "female" ? "HER" : gender === "nonbinary" ? "THEM" : "HIM";
       const affirmation = this.add.text(width / 2, 143, `THE CHILD INSIDE ${pronoun} IS SAFE NOW`, {
         fontFamily: "Arial Black", fontSize: "16px", color: "#edcf88", stroke: "#1a0e08", strokeThickness: 4, letterSpacing: 2,
       }).setOrigin(.5, 0).setAlpha(0).setDepth(33);
@@ -2086,7 +2134,7 @@ class ChapterSixEndCredits extends Phaser.Scene {
         await copyLink();
       }
     });
-    menuButton.on("pointerdown", () => this.scene.start("menu"));
+    menuButton.on("pointerdown", () => { resetGameState(); this.scene.start("menu"); });
     this.cameras.main.fadeIn(900, 0, 0, 0);
   }
 
