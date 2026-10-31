@@ -15,6 +15,102 @@ const BONUS_DONE_KEY = "trauma-bonus-done";
 const DEBUG_UNLOCK_CHAPTER_TWO = true;
 const DEBUG_UNLOCK_CHAPTER_THREE = true;
 const DEBUG_UNLOCK_CHAPTER_FOUR = true;
+const TRAUMA_RADIO_TRACKS = [
+  { title: "System Idle", chapter: "Main Menu", file: "assets/menu-system-idle.mp3" },
+  { title: "Artax and the Swamp of Sadness", chapter: "Chapter 1", file: "assets/chapter-1-cover.mp3" },
+  { title: "The NeverEnding Story Theme", chapter: "Chapter 1 • Healed", file: "assets/neverending-theme-cover.mp3" },
+  { title: "The Fight She Finishes", chapter: "Chapter 2", file: "assets/chapter2-fight-cover.mp3" },
+  { title: "If We Hold On Together", chapter: "Chapter 2 • Failure", file: "assets/chapter2-failure-cover.mp3" },
+  { title: "The Land Before Time", chapter: "Chapter 2 • Healed", file: "assets/chapter2-winning-cover.mp3" },
+  { title: "Past Lives", chapter: "After Chapter 2", file: "assets/bonus-past-lives.mp3" },
+  { title: "The Dip", chapter: "Chapter 3", file: "assets/chapter3-dip-music.mp3" },
+  { title: "Please Hold Me", chapter: "After Chapter 4", file: "assets/chapter4-bonus-please-hold-me.mp3" },
+  { title: "Old Yeller", chapter: "Chapter 4", file: "assets/chapter4-main.mp3" },
+  { title: "Mother's Run", chapter: "Chapter 5", file: "assets/chapter5-main.mp3" },
+  { title: "I Bring You a Song", chapter: "Chapter 5 • Healed", file: "assets/chapter5-winning.mp3" },
+  { title: "You Were Just a Kid", chapter: "Chapter 6", file: "assets/chapter6-last-scene.mp3" },
+  { title: "Adulthood Unlocked", chapter: "End Credits", file: "assets/chapter6-end-credits.mp3" },
+] as const;
+
+type RadioWakeLock = { release: () => Promise<void> };
+let traumaRadioAudio: HTMLAudioElement | null = null;
+let traumaRadioIndex = 0;
+let traumaRadioWakeLock: RadioWakeLock | null = null;
+
+function getTraumaRadioAudio() {
+  if (traumaRadioAudio) return traumaRadioAudio;
+  traumaRadioAudio = new Audio();
+  traumaRadioAudio.preload = "metadata";
+  traumaRadioAudio.volume = .72;
+  traumaRadioAudio.addEventListener("ended", () => playTraumaRadioTrack((traumaRadioIndex + 1) % TRAUMA_RADIO_TRACKS.length));
+  if ("mediaSession" in navigator) {
+    navigator.mediaSession.setActionHandler("play", () => resumeTraumaRadio());
+    navigator.mediaSession.setActionHandler("pause", () => pauseTraumaRadio());
+    navigator.mediaSession.setActionHandler("previoustrack", () => playTraumaRadioTrack((traumaRadioIndex + TRAUMA_RADIO_TRACKS.length - 1) % TRAUMA_RADIO_TRACKS.length));
+    navigator.mediaSession.setActionHandler("nexttrack", () => playTraumaRadioTrack((traumaRadioIndex + 1) % TRAUMA_RADIO_TRACKS.length));
+  }
+  return traumaRadioAudio;
+}
+
+async function requestTraumaRadioWakeLock() {
+  const wakeNavigator = navigator as Navigator & { wakeLock?: { request: (type: "screen") => Promise<RadioWakeLock> } };
+  if (!wakeNavigator.wakeLock || traumaRadioWakeLock) return;
+  try {
+    traumaRadioWakeLock = await wakeNavigator.wakeLock.request("screen");
+  } catch {
+    traumaRadioWakeLock = null;
+  }
+}
+
+function updateTraumaRadioMediaSession() {
+  if (!("mediaSession" in navigator)) return;
+  const track = TRAUMA_RADIO_TRACKS[traumaRadioIndex];
+  navigator.mediaSession.metadata = new MediaMetadata({
+    title: track.title,
+    artist: "Childhood Trauma Simulator",
+    album: `Trauma Radio • ${track.chapter}`,
+    artwork: [{ src: new URL("assets/chapter6-bedroom.png", window.location.href).href, sizes: "1280x720", type: "image/png" }],
+  });
+  navigator.mediaSession.playbackState = traumaRadioAudio?.paused ? "paused" : "playing";
+}
+
+function notifyTraumaRadio() {
+  window.dispatchEvent(new CustomEvent("trauma-radio-change", { detail: { index: traumaRadioIndex, playing: !traumaRadioAudio?.paused } }));
+}
+
+function playTraumaRadioTrack(index: number) {
+  traumaRadioIndex = Phaser.Math.Wrap(index, 0, TRAUMA_RADIO_TRACKS.length);
+  const audio = getTraumaRadioAudio();
+  audio.src = new URL(TRAUMA_RADIO_TRACKS[traumaRadioIndex].file, window.location.href).href;
+  audio.play().then(() => requestTraumaRadioWakeLock()).catch(() => notifyTraumaRadio());
+  updateTraumaRadioMediaSession();
+  notifyTraumaRadio();
+}
+
+function resumeTraumaRadio() {
+  const audio = getTraumaRadioAudio();
+  if (!audio.src) return playTraumaRadioTrack(traumaRadioIndex);
+  audio.play().then(() => requestTraumaRadioWakeLock()).catch(() => undefined);
+  updateTraumaRadioMediaSession();
+  notifyTraumaRadio();
+}
+
+function pauseTraumaRadio() {
+  traumaRadioAudio?.pause();
+  traumaRadioWakeLock?.release().catch(() => undefined);
+  traumaRadioWakeLock = null;
+  updateTraumaRadioMediaSession();
+  notifyTraumaRadio();
+}
+
+function stopTraumaRadio() {
+  pauseTraumaRadio();
+  if (traumaRadioAudio) traumaRadioAudio.currentTime = 0;
+}
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && traumaRadioAudio && !traumaRadioAudio.paused) requestTraumaRadioWakeLock();
+});
 const CHAPTER_SIX_CREDIT_BEATS = [
   { key: "healing-room", title: "YOU CAME BACK", caption: "The child no longer has to wait alone.", horror: false },
   { key: "bike", title: "LEARNING TO RIDE", caption: "This time, someone runs beside you.", horror: false },
@@ -65,6 +161,7 @@ class ChapterSelect extends Phaser.Scene {
     this.makeChapterRail();
     this.makeFinalBossShortcut(width);
     this.makeCreditsDebugShortcut(width);
+    this.makeTraumaRadioShortcut(width);
 
     this.menuMusic = this.sound.add("menu-system-idle", { volume: .38, loop: true });
     this.menuMusic.play();
@@ -149,6 +246,15 @@ class ChapterSelect extends Phaser.Scene {
     button.on("pointerover", () => button.setFillStyle(0x28627e, 1));
     button.on("pointerout", () => button.setFillStyle(0x193b50, .98));
     button.on("pointerdown", () => this.showCreditsDebugPanel());
+  }
+
+  private makeTraumaRadioShortcut(width: number) {
+    const button = this.add.rectangle(width - 780, 548, 250, 38, 0x5b1725, .98).setStrokeStyle(2, 0xff6a82, 1).setInteractive({ useHandCursor: true });
+    this.add.circle(width - 881, 548, 5, 0xff233f, 1);
+    this.add.text(width - 780, 548, "TRAUMA RADIO  •  LIVE", { fontFamily: "Arial Black", fontSize: "12px", color: "#ffe3e8", stroke: "#21050a", strokeThickness: 3 }).setOrigin(.5);
+    button.on("pointerover", () => button.setFillStyle(0x8b263a, 1));
+    button.on("pointerout", () => button.setFillStyle(0x5b1725, .98));
+    button.on("pointerdown", () => this.scene.start("radio"));
   }
 
   private showCreditsDebugPanel() {
@@ -1968,4 +2074,87 @@ class ChapterSixEndCredits extends Phaser.Scene {
   }
 }
 
-new Phaser.Game({ type: Phaser.AUTO, parent: "game", width: 1280, height: 720, backgroundColor: "#07100f", scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH }, scene: [ChapterSelect, SwampRescue, ChapterTwoBattle, BonusHealing, ChapterThreeRescue, ChapterFourRescue, ChapterFourBonus, ChapterFiveRun, ChapterSixTrueEnding, ChapterSixEndCredits] });
+class TraumaRadio extends Phaser.Scene {
+  private bars: Phaser.GameObjects.Rectangle[] = [];
+  private trackTitle!: Phaser.GameObjects.Text;
+  private chapterTitle!: Phaser.GameObjects.Text;
+  private status!: Phaser.GameObjects.Text;
+  private playLabel!: Phaser.GameObjects.Text;
+  private upcoming!: Phaser.GameObjects.Text;
+  private radioChangeHandler = () => this.refreshRadioDisplay();
+
+  constructor() { super("radio"); }
+
+  create() {
+    const { width, height } = this.scale;
+    this.sound.stopAll();
+    this.add.rectangle(width / 2, height / 2, width, height, 0x06070a, 1);
+    if (this.textures.exists("swamp")) this.add.image(width / 2, height / 2, "swamp").setDisplaySize(width, height).setAlpha(.13).setTint(0x61222e);
+    this.add.rectangle(width / 2, 66, width, 132, 0x070307, .94);
+    this.add.text(32, 17, "CHILDHOOD TRAUMA SIMULATOR", { fontFamily: "Arial Black", fontSize: "14px", color: "#b58b91" });
+    this.add.text(32, 39, "TRAUMA RADIO", { fontFamily: "Arial Black", fontSize: "43px", color: "#fff1e9", stroke: "#6e1027", strokeThickness: 8 });
+    this.add.circle(width - 156, 48, 9, 0xff213e, 1);
+    this.add.text(width - 134, 48, "ON AIR", { fontFamily: "Arial Black", fontSize: "20px", color: "#ff6076", stroke: "#250007", strokeThickness: 5 }).setOrigin(0, .5);
+
+    this.add.rectangle(width / 2, 343, 1120, 430, 0x100e12, .96).setStrokeStyle(4, 0x7c4c54, 1);
+    this.add.rectangle(width / 2, 242, 980, 154, 0x08090b, 1).setStrokeStyle(3, 0xd1966c, .65);
+    this.add.text(width / 2, 190, "NOW PLAYING", { fontFamily: "Arial Black", fontSize: "13px", color: "#bc7f88" }).setOrigin(.5);
+    this.trackTitle = this.add.text(width / 2, 230, "", { fontFamily: "Georgia", fontStyle: "bold", fontSize: "31px", color: "#fff1d6", align: "center", wordWrap: { width: 850 } }).setOrigin(.5);
+    this.chapterTitle = this.add.text(width / 2, 274, "", { fontFamily: "Arial Black", fontSize: "13px", color: "#c9828c" }).setOrigin(.5);
+
+    this.add.rectangle(width / 2, 370, 980, 3, 0x5e3239, 1);
+    for (let i = 0; i < 38; i++) {
+      const bar = this.add.rectangle(184 + i * 24.6, 370, 12, 20, i % 5 === 0 ? 0xffc06a : 0xe24560, .9).setOrigin(.5, 1);
+      this.bars.push(bar);
+    }
+
+    const makeControl = (x: number, label: string, widthValue: number, action: () => void) => {
+      const button = this.add.rectangle(x, 472, widthValue, 58, 0x4e1e2a, 1).setStrokeStyle(2, 0xef8798, 1).setInteractive({ useHandCursor: true });
+      const text = this.add.text(x, 472, label, { fontFamily: "Arial Black", fontSize: "15px", color: "#fff0ed" }).setOrigin(.5);
+      button.on("pointerover", () => button.setFillStyle(0x782d3e, 1));
+      button.on("pointerout", () => button.setFillStyle(0x4e1e2a, 1));
+      button.on("pointerdown", action);
+      return text;
+    };
+    makeControl(width / 2 - 250, "◀ PREVIOUS", 210, () => playTraumaRadioTrack((traumaRadioIndex + TRAUMA_RADIO_TRACKS.length - 1) % TRAUMA_RADIO_TRACKS.length));
+    this.playLabel = makeControl(width / 2, "PAUSE", 230, () => traumaRadioAudio?.paused ? resumeTraumaRadio() : pauseTraumaRadio());
+    makeControl(width / 2 + 250, "NEXT ▶", 210, () => playTraumaRadioTrack((traumaRadioIndex + 1) % TRAUMA_RADIO_TRACKS.length));
+
+    this.status = this.add.text(width / 2, 530, "", { fontFamily: "Courier New", fontStyle: "bold", fontSize: "13px", color: "#c2a2a7" }).setOrigin(.5);
+    this.upcoming = this.add.text(width / 2, 577, "", { fontFamily: "Georgia", fontStyle: "italic", fontSize: "15px", color: "#917b80", align: "center", wordWrap: { width: 1040 } }).setOrigin(.5);
+    this.add.text(width / 2, 624, "Screen-awake mode and lock-screen media controls are enabled while the station plays.", { fontFamily: "Arial Black", fontSize: "11px", color: "#9b737b" }).setOrigin(.5);
+
+    const back = this.add.rectangle(width / 2, 674, 300, 52, 0x252126, 1).setStrokeStyle(2, 0x987982, 1).setInteractive({ useHandCursor: true });
+    this.add.text(width / 2, 674, "STOP RADIO • MAIN MENU", { fontFamily: "Arial Black", fontSize: "14px", color: "#eadfe1" }).setOrigin(.5);
+    back.on("pointerdown", () => { stopTraumaRadio(); this.scene.start("menu"); });
+    this.input.keyboard!.on("keydown-M", () => { stopTraumaRadio(); this.scene.start("menu"); });
+
+    window.addEventListener("trauma-radio-change", this.radioChangeHandler);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => window.removeEventListener("trauma-radio-change", this.radioChangeHandler));
+    if (!traumaRadioAudio?.src) playTraumaRadioTrack(0); else resumeTraumaRadio();
+    this.refreshRadioDisplay();
+  }
+
+  update(time: number) {
+    const active = traumaRadioAudio && !traumaRadioAudio.paused;
+    this.bars.forEach((bar, i) => {
+      const wave = active ? .5 + .5 * Math.sin(time / 120 + i * .73 + Math.sin(time / 410 + i) * 2) : .08;
+      bar.height = 12 + wave * (36 + (i % 7) * 7);
+      bar.setAlpha(active ? .55 + wave * .45 : .22);
+    });
+  }
+
+  private refreshRadioDisplay() {
+    if (!this.trackTitle) return;
+    const track = TRAUMA_RADIO_TRACKS[traumaRadioIndex];
+    const playing = traumaRadioAudio && !traumaRadioAudio.paused;
+    this.trackTitle.setText(track.title);
+    this.chapterTitle.setText(track.chapter.toUpperCase());
+    this.playLabel.setText(playing ? "PAUSE" : "PLAY");
+    this.status.setText(`${playing ? "▶ STREAMING" : "Ⅱ PAUSED"}   •   TRACK ${traumaRadioIndex + 1} OF ${TRAUMA_RADIO_TRACKS.length}   •   BACKGROUND MUSIC ONLY`);
+    const nextTracks = [1, 2, 3].map((offset) => TRAUMA_RADIO_TRACKS[(traumaRadioIndex + offset) % TRAUMA_RADIO_TRACKS.length].title);
+    this.upcoming.setText(`UP NEXT:  ${nextTracks.join("   •   ")}`);
+  }
+}
+
+new Phaser.Game({ type: Phaser.AUTO, parent: "game", width: 1280, height: 720, backgroundColor: "#07100f", scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH }, scene: [ChapterSelect, SwampRescue, ChapterTwoBattle, BonusHealing, ChapterThreeRescue, ChapterFourRescue, ChapterFourBonus, ChapterFiveRun, ChapterSixTrueEnding, ChapterSixEndCredits, TraumaRadio] });
